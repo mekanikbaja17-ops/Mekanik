@@ -559,7 +559,14 @@
                                     <input type="date" id="lap-tanggal-manual" style="font-weight:bold;" onchange="syncFormDateToMonthFilter()">
                                 </div>
                             </div>
-                            <div class="grid-2">
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label>Jenis Laporan</label>
+                                    <select id="lap-jenis-kegiatan" style="font-weight:bold;">
+                                        <option value="PEKERJAAN">🛠️ Pekerjaan / Perbaikan</option>
+                                        <option value="PENGECEKAN">🔍 Pengecekan / Kontrol</option>
+                                    </select>
+                                </div>
                                 <div class="form-group">
                                     <label>Shift Kerja</label>
                                     <select id="lap-shift-manual" style="font-weight:bold;">
@@ -737,12 +744,17 @@
                         <input type="date" id="filter-tgl-selesai" onchange="renderHistoriTable()" style="width: 140px;">
                         
                         <button class="btn-action" style="background:#6c757d; color:white; padding:7px;" onclick="resetFilterTanggal()">Reset</button>
+
+                        <span style="font-weight:bold; margin-left:10px;">Unit Mesin:</span>
+                        <select id="filter-mesin-histori" onchange="renderHistoriTable()" style="font-weight:bold;">
+                            <option value="ALL">Semua Mesin</option>
+                        </select>
                         
                         <span style="font-weight:bold; margin-left:10px;">Filter Jenis:</span>
                         <select id="filter-jenis-laporan" onchange="renderHistoriTable()" style="font-weight:bold;">
                             <option value="ALL">Semua Jenis</option>
-                            <option value="PERBAIKAN">🛠️ Hanya Perbaikan / Pekerjaan</option>
-                            <option value="PENGECEKAN">🔍 Hanya Pengecekan / Rutin</option>
+                            <option value="PEKERJAAN">🛠️ Pekerjaan / Perbaikan</option>
+                            <option value="PENGECEKAN">🔍 Pengecekan / Kontrol</option>
                         </select>
                     </div>
 
@@ -1564,6 +1576,12 @@
                     if(listMesin.includes(cur)) el.value = cur;
                 }
             });
+            const elFilterMesin = document.getElementById('filter-mesin-histori');
+            if(elFilterMesin) {
+                const curFilter = elFilterMesin.value || 'ALL';
+                elFilterMesin.innerHTML = `<option value="ALL">Semua Mesin</option>` + optionsHtml;
+                if(curFilter === 'ALL' || listMesin.includes(curFilter)) elFilterMesin.value = curFilter;
+            }
         }
 
         function populateCmdPersonelDropdown() {
@@ -2692,6 +2710,7 @@
                 partText = `${partNamaInput} (${partTipeInput || '-'}) - Qty: ${qty} ${satuanInput}`;
             }
 
+            const jenisKegiatan = document.getElementById('lap-jenis-kegiatan') ? document.getElementById('lap-jenis-kegiatan').value : 'PEKERJAAN';
             const targetId = editId ? parseInt(editId) : Date.now();
             const laporanData = {
                 id: targetId,
@@ -2702,7 +2721,7 @@
                 partText: partText,
                 jamMulai: rangeJamStr,
                 jamSelesai: totalMenitDowntime,
-                ket: `[Equip: ${equipment}] [Issue: ${issue}] - ${document.getElementById('lap-keterangan').value || '-'}`
+                ket: `[Jenis: ${jenisKegiatan}] [Equip: ${equipment}] [Issue: ${issue}] - ${document.getElementById('lap-keterangan').value || '-'}`
             };
 
             try {
@@ -2803,11 +2822,21 @@
             }
 
             let rawKet = target.ket || "";
+            let matchJenis = rawKet.match(/\[Jenis:\s*([^\]]+)\]/i);
             let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
             let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
+            if(document.getElementById('lap-jenis-kegiatan')) {
+                if(matchJenis) {
+                    document.getElementById('lap-jenis-kegiatan').value = matchJenis[1].trim().toUpperCase();
+                } else {
+                    let lowKet = rawKet.toLowerCase();
+                    let isCek = lowKet.includes('cek') || lowKet.includes('pengecekan') || lowKet.includes('kontrol') || lowKet.includes('monitoring') || lowKet.includes('inspeksi');
+                    document.getElementById('lap-jenis-kegiatan').value = isCek ? 'PENGECEKAN' : 'PEKERJAAN';
+                }
+            }
             if(matchEquip) document.getElementById('lap-equipment').value = matchEquip[1];
             if(matchIssue) document.getElementById('lap-issue').value = matchIssue[1];
-            document.getElementById('lap-keterangan').value = rawKet.replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/^-\s*/, '');
+            document.getElementById('lap-keterangan').value = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/^-\s*/, '');
 
             if(target.partText && target.partText !== "-") {
                 let matchPart = target.partText.match(/^(.*?)\s*\((.*?)\)\s*-\s*Qty:\s*(\d+)\s*(.*)$/);
@@ -3059,9 +3088,12 @@
                 return (parseInt(String(a.shift).replace(/[^0-9]/g, '')) || 1) - (parseInt(String(b.shift).replace(/[^0-9]/g, '')) || 1);
             });
 
+            const mesinFilter = document.getElementById('filter-mesin-histori') ? document.getElementById('filter-mesin-histori').value : 'ALL';
             const jenisFilter = document.getElementById('filter-jenis-laporan') ? document.getElementById('filter-jenis-laporan').value : 'ALL';
 
             let filteredList = sortedLaporan.filter(item => {
+                if(mesinFilter !== 'ALL' && String(item.mesin || '').trim().toUpperCase() !== mesinFilter.toUpperCase()) return false;
+
                 let rawItemTgl = normalizeDateToWIB_YMD(item.tanggal);
                 let parts = rawItemTgl.split('-');
                 if(parts.length === 3) {
@@ -3071,11 +3103,18 @@
                 if(tglMulai && rawItemTgl < tglMulai) return false;
                 if(tglSelesai && rawItemTgl > tglSelesai) return false;
 
-                let gabungTeks = `${item.ket || ''} ${item.partText || ''}`.toLowerCase();
-                let isCek = gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi');
+                let rawKetStr = String(item.ket || '');
+                let matchJenis = rawKetStr.match(/\[Jenis:\s*([^\]]+)\]/i);
+                let isCek = false;
+                if (matchJenis) {
+                    isCek = (matchJenis[1].trim().toUpperCase() === 'PENGECEKAN');
+                } else {
+                    let gabungTeks = `${rawKetStr} ${item.partText || ''}`.toLowerCase();
+                    isCek = gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi');
+                }
                 
                 if (jenisFilter === 'PENGECEKAN' && !isCek) return false;
-                if (jenisFilter === 'PERBAIKAN' && isCek) return false;
+                if ((jenisFilter === 'PEKERJAAN' || jenisFilter === 'PERBAIKAN') && isCek) return false;
 
                 return `${rawItemTgl} ${formatTanggalIndo(item.tanggal)} ${item.shift} ${item.mesin} ${item.personel} ${item.partText} ${item.jamMulai} ${item.ket}`.toLowerCase().includes(searchKeyword);
             });
@@ -3088,11 +3127,17 @@
             let htmlContent = "";
             filteredList.forEach(item => {
                 let rawKet = item.ket || "";
+                let matchJenis = rawKet.match(/\[Jenis:\s*([^\]]+)\]/i);
+                let isCek = matchJenis ? (matchJenis[1].trim().toUpperCase() === 'PENGECEKAN') : /cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet);
+                let jenisBadge = isCek
+                    ? `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔍 Pengecekan</span>`
+                    : `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🛠️ Pekerjaan</span>`;
+
                 let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
                 let equipDisplay = matchEquip ? matchEquip[1] : "-";
                 let issueDisplay = matchIssue ? matchIssue[1] : "-";
-                let descDisplay = rawKet.replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
+                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
 
                 let actionTd = isMaster ? `<td>
                     <button class="btn-action btn-edit" onclick="editLaporan('${item.id}')">Edit</button>
@@ -3100,7 +3145,7 @@
                 </td>` : '';
 
                 htmlContent += `<tr>
-                    <td><strong>${formatTanggalIndo(item.tanggal)}</strong><br><small style="color:#666;">${item.shift || "-"}</small></td>
+                    <td><strong>${formatTanggalIndo(item.tanggal)}</strong><br><small style="color:#666;">${item.shift || "-"}</small><br>${jenisBadge}</td>
                     <td><strong>${item.mesin}</strong></td>
                     <td><strong>Eq:</strong> ${equipDisplay}<br><strong>Issue:</strong> ${issueDisplay}</td>
                     <td>${item.personel}</td>
@@ -3157,7 +3202,7 @@
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
                 let equipDisplay = matchEquip ? matchEquip[1] : "-";
                 let issueDisplay = matchIssue ? matchIssue[1] : "-";
-                let descDisplay = rawKet.replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
+                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
 
                 htmlContent += `<tr>
                     <td><strong>${formatTanggalIndo(item.tanggal)}</strong><br><small style="color:#666;">${item.shift || "-"}</small></td>
@@ -3220,7 +3265,7 @@
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
                 let equipDisplay = matchEquip ? matchEquip[1] : "-";
                 let issueDisplay = matchIssue ? matchIssue[1] : "-";
-                let descDisplay = rawKet.replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
+                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
 
                 htmlContent += `<tr>
                     <td><strong>${formatTanggalIndo(item.tanggal)}</strong><br><small style="color:#666;">${item.shift || "-"}</small></td>
@@ -3476,6 +3521,8 @@
         function resetFilterTanggal() {
             if(document.getElementById('filter-tgl-mulai')) document.getElementById('filter-tgl-mulai').value = '';
             if(document.getElementById('filter-tgl-selesai')) document.getElementById('filter-tgl-selesai').value = '';
+            if(document.getElementById('filter-mesin-histori')) document.getElementById('filter-mesin-histori').value = 'ALL';
+            if(document.getElementById('filter-jenis-laporan')) document.getElementById('filter-jenis-laporan').value = 'ALL';
             renderHistoriTable();
         }
 
