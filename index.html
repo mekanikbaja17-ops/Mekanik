@@ -150,7 +150,52 @@
         /* LOGIN CONTAINER */
         #login-container {
             display: flex; justify-content: center; align-items: center; height: 100vh;
-            background: transparent; padding: 15px;
+            background-color: #1e293b;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            padding: 15px;
+        }
+        #login-container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            pointer-events: none;
+            z-index: 0;
+        }
+        #login-container .login-card {
+            position: relative;
+            z-index: 1;
+        }
+        .pin-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .pin-input-wrapper input {
+            padding-right: 42px;
+        }
+        .btn-toggle-pin {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #475569;
+            cursor: pointer;
+            font-size: 15px;
+            padding: 6px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-toggle-pin:hover {
+            color: var(--primary-color);
+            background: #f1f5f9;
         }
         .login-card {
             background: rgba(255, 255, 255, 0.96); padding: 35px 30px; border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,0.4);
@@ -582,8 +627,13 @@
                     <input type="text" id="username" placeholder="Masukkan Nama Depan..." required autocomplete="username">
                 </div>
                 <div class="form-group">
-                    <label>PIN Keamanan <span style="color:red;">*WAJIB</span></label>
-                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <label>PIN Keamanan</label>
+                    <div class="pin-input-wrapper">
+                        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" class="btn-toggle-pin" id="btn-toggle-pin" onclick="toggleLoginPinVisibility()" title="Tampilkan / Sembunyikan PIN" aria-label="Tampilkan atau sembunyikan PIN">
+                            <i class="fa-solid fa-eye" id="icon-toggle-pin"></i>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary">VERIFIKASI & MASUK</button>
                 <button type="button" id="btn-login-install-app" onclick="triggerInstallAppDirect()" style="margin-top:10px; width:100%; padding:10px; background:#003399; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -1574,6 +1624,7 @@
         let isSavingData = false;
         let touchStartX = 0;
         let tempLogoBase64 = "";
+        let tempLoginBgBase64 = "";
 
         function scrollToTop() {
             const container = document.getElementById('main-content-body');
@@ -1661,6 +1712,96 @@
         function t(idText, enText) {
             return (typeof currentLang !== 'undefined' && currentLang === 'en') ? enText : idText;
         }
+        let currentLaporanFotoData = "";
+
+        function compressImageFileToBase64(file, maxWidth = 800, quality = 0.72) {
+            return new Promise((resolve, reject) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    reject(new Error('File bukan gambar'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxWidth) {
+                            h = Math.round((h * maxWidth) / w);
+                            w = maxWidth;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = ev.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handleLaporanFotoChange(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            try {
+                const compressedBase64 = await compressImageFileToBase64(file, 800, 0.72);
+                currentLaporanFotoData = compressedBase64;
+                const box = document.getElementById('lap-foto-preview-box');
+                const img = document.getElementById('lap-foto-preview-img');
+                const info = document.getElementById('lap-foto-info');
+                if (img) img.src = compressedBase64;
+                if (info) {
+                    const approxKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+                    info.innerText = `${file.name} (~${approxKb} KB siap disimpan)`;
+                }
+                if (box) box.style.display = 'block';
+            } catch (err) {
+                alert(t('Gagal memproses foto dokumentasi.', 'Failed to process documentation photo.'));
+                event.target.value = '';
+            }
+        }
+
+        function hapusFotoLaporan() {
+            currentLaporanFotoData = "";
+            const fileInput = document.getElementById('lap-foto-file');
+            if (fileInput) fileInput.value = '';
+            const box = document.getElementById('lap-foto-preview-box');
+            const img = document.getElementById('lap-foto-preview-img');
+            const info = document.getElementById('lap-foto-info');
+            if (img) img.src = '';
+            if (info) info.innerText = '';
+            if (box) box.style.display = 'none';
+        }
+
+        function setLaporanFotoPreview(fotoSrc, labelText = '') {
+            currentLaporanFotoData = fotoSrc || "";
+            const box = document.getElementById('lap-foto-preview-box');
+            const img = document.getElementById('lap-foto-preview-img');
+            const info = document.getElementById('lap-foto-info');
+            if (currentLaporanFotoData) {
+                if (img) img.src = currentLaporanFotoData;
+                if (info) info.innerText = labelText || t('Foto dokumentasi tersimpan', 'Saved documentation photo');
+                if (box) box.style.display = 'block';
+            } else {
+                if (img) img.src = '';
+                if (info) info.innerText = '';
+                if (box) box.style.display = 'none';
+            }
+        }
+
+        function extractFotoFromLaporan(item) {
+            if (!item) return "";
+            if (item.fotoUrl && String(item.fotoUrl).trim() !== "") return String(item.fotoUrl).trim();
+            if (item.foto && String(item.foto).trim() !== "") return String(item.foto).trim();
+            const rawKet = String(item.ket || "");
+            const matchFoto = rawKet.match(/\[Foto:\s*([^\]]+)\]/i);
+            return matchFoto ? matchFoto[1].trim() : "";
+        }
 
         function isUserMasterAdmin() {
             const s = cloudData.settings || {};
@@ -1727,6 +1868,10 @@
                 if (storedPerintah) { cloudData.perintahKerja = JSON.parse(storedPerintah); }
                 let storedDataPP = localStorage.getItem('app_data_pp');
                 if (storedDataPP) { cloudData.dataPP = JSON.parse(storedDataPP); }
+                let storedLaporan = localStorage.getItem('app_laporan_data');
+                if (storedLaporan && (!cloudData.laporan || cloudData.laporan.length === 0)) {
+                    cloudData.laporan = JSON.parse(storedLaporan);
+                }
             } catch(e) {}
         }
 
@@ -1736,6 +1881,7 @@
                 localStorage.setItem('app_karyawan_data', JSON.stringify(cloudData.karyawan || []));
                 localStorage.setItem('app_perintah_kerja', JSON.stringify(cloudData.perintahKerja || []));
                 localStorage.setItem('app_data_pp', JSON.stringify(cloudData.dataPP || []));
+                localStorage.setItem('app_laporan_data', JSON.stringify(cloudData.laporan || []));
             } catch(e) {}
         }
 
@@ -1775,6 +1921,15 @@
             renderMasterTags();
 
             const logoBase64 = s.logoBase64 || "";
+            const loginBgBase64 = s.loginBgBase64 || "";
+            const loginContainerEl = document.getElementById('login-container');
+            if (loginContainerEl) {
+                if (loginBgBase64 && loginBgBase64.trim() !== "") {
+                    loginContainerEl.style.backgroundImage = `url("${loginBgBase64}")`;
+                } else {
+                    loginContainerEl.style.backgroundImage = 'none';
+                }
+            }
             const loginLogoImg = document.getElementById('login-logo-img');
             const loginDefaultIcon = document.getElementById('login-default-icon');
             const sidebarLogoImg = document.getElementById('sidebar-logo-img');
@@ -1818,6 +1973,15 @@
                     previewBox.innerHTML = `<img src="${logoBase64}" style="width:100%; height:100%; object-fit:contain;">`;
                 } else {
                     previewBox.innerHTML = `<span style="font-size:10px; color:#777;">Kosong</span>`;
+                }
+
+                let bgPreviewBox = document.getElementById('login-bg-preview-box');
+                if(bgPreviewBox) {
+                    if(loginBgBase64) {
+                        bgPreviewBox.innerHTML = `<img src="${loginBgBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+                    } else {
+                        bgPreviewBox.innerHTML = `<span style="font-size:10px; color:#cbd5e1;">Default Gelap</span>`;
+                    }
                 }
             }
 
@@ -1985,6 +2149,69 @@
             sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
         }
 
+        function toggleLoginPinVisibility() {
+            const pinInput = document.getElementById('password');
+            const iconEl = document.getElementById('icon-toggle-pin');
+            if (!pinInput) return;
+            if (pinInput.type === 'password') {
+                pinInput.type = 'text';
+                if (iconEl) {
+                    iconEl.classList.remove('fa-eye');
+                    iconEl.classList.add('fa-eye-slash');
+                }
+            } else {
+                pinInput.type = 'password';
+                if (iconEl) {
+                    iconEl.classList.remove('fa-eye-slash');
+                    iconEl.classList.add('fa-eye');
+                }
+            }
+        }
+
+        function previewLoginBgFile(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            compressImageFileToBase64(file, 1280, 0.75).then(compressed => {
+                tempLoginBgBase64 = compressed;
+                const box = document.getElementById('login-bg-preview-box');
+                if (box) box.innerHTML = `<img src="${tempLoginBgBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+            }).catch(() => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempLoginBgBase64 = e.target.result;
+                    const box = document.getElementById('login-bg-preview-box');
+                    if (box) box.innerHTML = `<img src="${tempLoginBgBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function hapusLoginBg() {
+            tempLoginBgBase64 = "";
+            const fileInput = document.getElementById('setting-login-bg-file');
+            if (fileInput) fileInput.value = "";
+            if (!cloudData.settings) cloudData.settings = {};
+            cloudData.settings.loginBgBase64 = "";
+            const box = document.getElementById('login-bg-preview-box');
+            if (box) box.innerHTML = `<span style="font-size:10px; color:#cbd5e1;">Default Gelap</span>`;
+            const loginContainerEl = document.getElementById('login-container');
+            if (loginContainerEl) loginContainerEl.style.backgroundImage = 'none';
+        }
+
+        function saveLoginBgSettings() {
+            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
+            if(!cloudData.settings) cloudData.settings = {};
+            if(tempLoginBgBase64 !== "") {
+                cloudData.settings.loginBgBase64 = tempLoginBgBase64;
+            } else if(document.getElementById('setting-login-bg-file') && document.getElementById('setting-login-bg-file').value === "") {
+                cloudData.settings.loginBgBase64 = "";
+            }
+            saveLocalAppData();
+            applySettingsToUI();
+            alert("Foto background halaman login berhasil diperbarui!");
+            sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
+        }
+
         function checkMasterAdminPermissions() {
             const isMaster = isUserMasterAdmin();
             const noticeBox = document.getElementById('settings-locked-notice');
@@ -1993,14 +2220,15 @@
                 'setting-lock-karyawan', 'setting-master-names',
                 'setting-menu-laporan', 'setting-menu-perintah', 'setting-menu-histori', 'setting-menu-lap-part',
                 'setting-menu-lap-downtime', 'setting-menu-sparepart', 'setting-menu-datapp', 'setting-menu-grafik',
-                'setting-menu-karyawan', 'setting-menu-pengaturan'
+                'setting-menu-karyawan', 'setting-menu-pengaturan',
+                'setting-login-bg-file'
             ];
             if(noticeBox) noticeBox.style.display = isMaster ? 'none' : 'block';
             ids.forEach(id => {
                 let el = document.getElementById(id);
                 if(el) isMaster ? el.removeAttribute('disabled') : el.setAttribute('disabled', 'true');
             });
-            ['btn-save-title', 'btn-save-logo', 'btn-save-admin'].forEach(id => {
+            ['btn-save-title', 'btn-save-logo',  'btn-save-admin'].forEach(id => {
                 let el = document.getElementById(id);
                 if(el) el.style.display = isMaster ? 'inline-block' : 'none';
             });
@@ -2275,10 +2503,27 @@
                 .then(res => res.json())
                 .then(incomingData => {
                     if(incomingData && incomingData.laporan) {
-                        cloudData.laporan = incomingData.laporan.map(item => ({
-                            ...item,
-                            tanggal: normalizeDateToWIB_YMD(item.tanggal) || item.tanggal
-                        }));
+                        const prevLocalLaporan = Array.isArray(cloudData.laporan) ? [...cloudData.laporan] : [];
+                        const nowTs = Date.now();
+                        const laporanMap = new Map();
+                        incomingData.laporan.forEach(item => {
+                            if (!item) return;
+                            const normalizedItem = {
+                                ...item,
+                                tanggal: normalizeDateToWIB_YMD(item.tanggal) || item.tanggal
+                            };
+                            laporanMap.set(String(normalizedItem.id), normalizedItem);
+                        });
+                        // Pertahankan item lokal jika baru disimpan/diedit dalam 20 detik terakhir agar tidak kembali ke data lama
+                        prevLocalLaporan.forEach(localItem => {
+                            if (!localItem || localItem.id === undefined) return;
+                            const localKey = String(localItem.id);
+                            const isRecentEdit = localItem._editedAt && (nowTs - Number(localItem._editedAt) < 20000);
+                            if (!laporanMap.has(localKey) || isRecentEdit) {
+                                laporanMap.set(localKey, localItem);
+                            }
+                        });
+                        cloudData.laporan = Array.from(laporanMap.values());
                         if(incomingData.sparepart) {
                             cloudData.sparepart = incomingData.sparepart.map(p => ({
                                 ...p,
@@ -3058,7 +3303,12 @@
             }
 
             const jenisKegiatan = document.getElementById('lap-jenis-kegiatan') ? document.getElementById('lap-jenis-kegiatan').value : 'PEKERJAAN';
-            const targetId = editId ? parseInt(editId) : Date.now();
+            const parsedEditId = editId ? parseInt(editId, 10) : NaN;
+            const targetId = editId ? (isNaN(parsedEditId) ? editId : parsedEditId) : Date.now();
+            const baseKetStr = `[Jenis: ${jenisKegiatan}] [Equip: ${equipment}] [Issue: ${issue}] - ${document.getElementById('lap-keterangan').value || '-'}`;
+            const fotoMarkerStr = (currentLaporanFotoData && !currentLaporanFotoData.startsWith('data:image/'))
+                ? ` [Foto: ${currentLaporanFotoData}]`
+                : (currentLaporanFotoData ? ` [Foto: Terlampir]` : '');
             const laporanData = {
                 id: targetId,
                 mesin: selectedMesin,
@@ -3068,7 +3318,8 @@
                 partText: partText,
                 jamMulai: rangeJamStr,
                 jamSelesai: totalMenitDowntime,
-                ket: `[Jenis: ${jenisKegiatan}] [Equip: ${equipment}] [Issue: ${issue}] - ${document.getElementById('lap-keterangan').value || '-'}`
+                foto: currentLaporanFotoData || "",
+                ket: `${baseKetStr}${fotoMarkerStr}`
             };
 
             isSavingData = true;
@@ -3113,15 +3364,50 @@
                 }
 
                 if(editId) {
-                    await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
-                    await sendDataToSheets({ action: 'laporan', type: 'delete', id: parseInt(editId) });
-                    const idx = cloudData.laporan.findIndex(i => String(i.id) === String(editId));
-                    if (idx !== -1) cloudData.laporan[idx] = laporanData;
+                    const oldIdNum = parseInt(editId, 10);
+                    const oldIdStr = String(editId);
+                    const newIdStr = String(laporanData.id);
+
+                    const editedRecord = {
+                        ...laporanData,
+                        _editedAt: Date.now()
+                    };
+
+                    // Perbarui state & localStorage langsung dengan penanda _editedAt agar tidak tertimpa fetch lama
+                    cloudData.laporan = (cloudData.laporan || []).filter(i => {
+                        const sid = String(i.id);
+                        return sid !== oldIdStr && sid !== newIdStr;
+                    });
+                    cloudData.laporan.push(editedRecord);
+                    saveLocalAppData();
+
+                    let updateRes = null;
+                    try {
+                        updateRes = await sendDataToSheets({ action: 'laporan', type: 'update', row: laporanData });
+                    } catch (e) {
+                        updateRes = null;
+                    }
+
+                    // Jika backend belum mendukung type 'update', timpa lewat delete (jika ID beda) + add dengan ID yang sama
+                    if (!updateRes || updateRes.status === 'error' || updateRes.ignored || updateRes.updated === false) {
+                        if (newIdStr !== oldIdStr) {
+                            await sendDataToSheets({ action: 'laporan', type: 'delete', id: isNaN(oldIdNum) ? editId : oldIdNum });
+                        }
+                        await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
+                    }
+
                     alert(t('BERHASIL! Laporan berhasil diperbarui.', 'SUCCESS! Work report has been updated.'));
                     cancelEditMode();
                 } else {
+                    const newRecord = {
+                        ...laporanData,
+                        _editedAt: Date.now()
+                    };
+                    cloudData.laporan = (cloudData.laporan || []).filter(i => String(i.id) !== String(laporanData.id));
+                    cloudData.laporan.push(newRecord);
+                    saveLocalAppData();
+
                     await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
-                    cloudData.laporan.push(laporanData);
                     alert(t('BERHASIL! Laporan kerja tersimpan.', 'SUCCESS! Work report has been saved.'));
                 }
 
@@ -3134,6 +3420,7 @@
                 document.getElementById('lap-sparepart-tipe').removeAttribute('readonly');
                 document.getElementById('lap-mode-waktu').value = 'jam';
                 toggleModeWaktuInput();
+                hapusFotoLaporan();
                 globalOldQty = 0;
 
                 renderAllViews();
@@ -3192,7 +3479,9 @@
             }
             if(matchEquip) document.getElementById('lap-equipment').value = matchEquip[1];
             if(matchIssue) document.getElementById('lap-issue').value = matchIssue[1];
-            document.getElementById('lap-keterangan').value = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/^-\s*/, '');
+            document.getElementById('lap-keterangan').value = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/\[Foto:[^\]]+\]/i, '').replace(/^-\s*/, '').trim();
+            const existingFoto = extractFotoFromLaporan(target);
+            setLaporanFotoPreview(existingFoto, existingFoto ? t('Foto dokumentasi laporan', 'Report documentation photo') : '');
 
             if(target.partText && target.partText !== "-") {
                 let matchPart = target.partText.match(/^(.*?)\s*\((.*?)\)\s*-\s*Qty:\s*(\d+)\s*(.*)$/);
@@ -3237,6 +3526,7 @@
             document.getElementById('lap-sparepart-tipe').removeAttribute('readonly');
             document.getElementById('lap-mode-waktu').value = 'jam';
             toggleModeWaktuInput();
+            hapusFotoLaporan();
             globalOldQty = 0;
         }
 
@@ -3438,10 +3728,20 @@
                 return;
             }
 
+            function getShiftSortOrder(shiftVal) {
+                const s = String(shiftVal || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (s.includes('nonshift') || s === 'ns' || s.startsWith('ns')) return 0;
+                if (s.includes('shift1') || s === '1') return 1;
+                if (s.includes('shift2') || s === '2') return 2;
+                if (s.includes('shift3') || s === '3') return 3;
+                const num = parseInt(s.replace(/[^0-9]/g, ''), 10);
+                return isNaN(num) ? 99 : num;
+            }
+
             let sortedLaporan = [...cloudData.laporan].sort((a, b) => {
                 let dateDiff = normalizeDateToWIB_YMD(a.tanggal).localeCompare(normalizeDateToWIB_YMD(b.tanggal));
                 if (dateDiff !== 0) return dateDiff;
-                return (parseInt(String(a.shift).replace(/[^0-9]/g, '')) || 1) - (parseInt(String(b.shift).replace(/[^0-9]/g, '')) || 1);
+                return getShiftSortOrder(a.shift) - getShiftSortOrder(b.shift);
             });
 
             const mesinFilter = document.getElementById('filter-mesin-histori') ? document.getElementById('filter-mesin-histori').value : 'ALL';
@@ -3513,7 +3813,18 @@
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
                 let equipDisplay = matchEquip ? matchEquip[1] : "-";
                 let issueDisplay = matchIssue ? matchIssue[1] : "-";
-                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '');
+                let fotoSource = extractFotoFromLaporan(item);
+                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/\[Foto:[^\]]+\]/i, '').trim();
+                let fotoBadgeHtml = '';
+                if (fotoSource) {
+                    if (fotoSource.startsWith('http://') || fotoSource.startsWith('https://')) {
+                        fotoBadgeHtml = `<div style="margin-top:5px;"><a href="${escapeHtml(fotoSource)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:bold; color:#003399; background:#e0f2fe; padding:3px 8px; border-radius:4px; text-decoration:none;">📷 ${t('Lihat Foto Dokumentasi', 'View Photo')}</a></div>`;
+                    } else if (fotoSource.startsWith('data:image/')) {
+                        fotoBadgeHtml = `<div style="margin-top:5px;"><img src="${escapeHtml(fotoSource)}" alt="Foto" style="max-width:90px; max-height:65px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1;"></div>`;
+                    } else {
+                        fotoBadgeHtml = `<div style="margin-top:5px;"><span style="font-size:11px; color:#0369a1; font-weight:600;">📷 ${escapeHtml(fotoSource)}</span></div>`;
+                    }
+                }
 
                 let actionTd = isMaster ? `<td>
                     <button class="btn-action btn-edit" onclick="editLaporan('${item.id}')">Edit</button>
@@ -3528,7 +3839,7 @@
                     <td>${escapeHtml(item.partText)}</td>
                     <td><span style="font-family:monospace; font-weight:bold; color:#003399;">🕒 ${escapeHtml(item.jamMulai || "-")}</span></td>
                     <td><b>${escapeHtml(formatMenitKeJam(item.jamSelesai))}</b></td>
-                    <td>${escapeHtml(descDisplay)}</td>
+                    <td>${escapeHtml(descDisplay)}${fotoBadgeHtml}</td>
                     ${actionTd}
                 </tr>`;
             });
@@ -4755,12 +5066,10 @@
                 }
             });
 
-            // Translate specific labels with nested red asterisks
+            // Translate PIN label cleanly without *WAJIB / *REQUIRED
             const pinLabel = document.querySelector('#login-form .form-group:nth-child(2) label');
             if (pinLabel) {
-                pinLabel.innerHTML = lang === 'en'
-                    ? 'Security PIN <span style="color:red;">*REQUIRED</span>'
-                    : 'PIN Keamanan <span style="color:red;">*WAJIB</span>';
+                pinLabel.textContent = lang === 'en' ? 'Security PIN' : 'PIN Keamanan';
             }
 
             const cmdNotice = document.getElementById('perintah-info-notice');
@@ -4798,3 +5107,4 @@
     </script>
 </body>
 </html>
+Analyzing
