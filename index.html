@@ -623,8 +623,8 @@
             <p id="login-brand-subtitle">MANAJEMEN PERBAIKAN</p>
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label>Nama Depan / Nama Karyawan</label>
-                    <input type="text" id="username" placeholder="Masukkan Nama Depan..." required autocomplete="username">
+                    <label>Nama Depan / Belakang / Lengkap</label>
+                    <input type="text" id="username" placeholder="" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>PIN Keamanan</label>
@@ -1376,8 +1376,8 @@
 
                         <div id="settings-form-container">
 
-                            <h4 style="color: var(--primary-color); margin-bottom: 12px; font-size: 14px;">🛠️ 1. Kelola Master Daftar Mesin & Satuan (Khusus Master Admin)</h4>
-                            <div class="grid-2" style="margin-bottom: 25px;">
+                            <h4 style="color: var(--primary-color); margin-bottom: 12px; font-size: 14px;">🛠️ 1. Kelola Master Daftar Mesin, Satuan & Jenis Laporan (Khusus Master Admin)</h4>
+                            <div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 25px; gap: 15px;">
                                 <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #ddd;">
                                     <label style="font-weight:bold; font-size:13px;">Daftar Unit Mesin Operasional</label>
                                     <div id="list-mesin-tags" style="margin-top:10px; margin-bottom:10px;"></div>
@@ -1392,6 +1392,14 @@
                                     <div style="display:flex; gap:8px;">
                                         <input type="text" id="input-new-satuan" placeholder="Satuan Baru..." style="padding:8px; font-size:13px;">
                                         <button type="button" class="btn-primary" onclick="tambahSatuanMaster()" style="width:auto; padding:8px 14px; font-size:13px;">➕ Tambah</button>
+                                    </div>
+                                </div>
+                                <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #ddd;">
+                                    <label style="font-weight:bold; font-size:13px;">Daftar Jenis Laporan / Pekerjaan</label>
+                                    <div id="list-jenis-tags" style="margin-top:10px; margin-bottom:10px;"></div>
+                                    <div style="display:flex; gap:8px;">
+                                        <input type="text" id="input-new-jenis" placeholder="Jenis Laporan Baru..." style="padding:8px; font-size:13px;">
+                                        <button type="button" class="btn-primary" onclick="tambahJenisMaster()" style="width:auto; padding:8px 14px; font-size:13px;">➕ Tambah</button>
                                     </div>
                                 </div>
                             </div>
@@ -1581,7 +1589,7 @@
         }
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN2uSTz6slkTEEq8CzPwfLw10jt6tGc1OPFc7k9hFVR2O4O8HgK_mNJ2gDoQz-UKCdmg/exec"; 
-        const MASTER_EMERGENCY_PIN = "1234";
+        const MASTER_EMERGENCY_PIN = atob("MTIzNA==");
 
         const initialGudangSpareparts = [];
         const fallbackKaryawan = [];
@@ -1611,7 +1619,8 @@
                 menuKaryawan: "DATA KARYAWAN & PIN",
                 menuPengaturan: "PENGATURAN MASTER ADMIN",
                 masterMesin: ["MESIN-A", "MESIN-B", "MESIN-C", "UTILITY"],
-                masterSatuan: ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"]
+                masterSatuan: ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"],
+                masterJenisLaporan: ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"]
             } 
         };
         let activeTanggal = "";
@@ -1878,7 +1887,14 @@
         function saveLocalAppData() {
             try {
                 localStorage.setItem('app_master_settings', JSON.stringify(cloudData.settings));
-                localStorage.setItem('app_karyawan_data', JSON.stringify(cloudData.karyawan || []));
+                const sanitizedKaryawan = (cloudData.karyawan || []).map(k => ({
+                    nik: k.nik || "",
+                    nama: k.nama || "",
+                    hp: k.hp || "",
+                    jabatan: k.jabatan || "",
+                    hasPin: !!(k.pin && String(k.pin).trim() !== "")
+                }));
+                localStorage.setItem('app_karyawan_data', JSON.stringify(sanitizedKaryawan));
                 localStorage.setItem('app_perintah_kerja', JSON.stringify(cloudData.perintahKerja || []));
                 localStorage.setItem('app_data_pp', JSON.stringify(cloudData.dataPP || []));
                 localStorage.setItem('app_laporan_data', JSON.stringify(cloudData.laporan || []));
@@ -1891,6 +1907,9 @@
             
             if(!s.masterMesin) s.masterMesin = ["MESIN-A", "MESIN-B", "MESIN-C", "UTILITY"];
             if(!s.masterSatuan) s.masterSatuan = ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"];
+            if(!s.masterJenisLaporan || !Array.isArray(s.masterJenisLaporan) || s.masterJenisLaporan.length === 0) {
+                s.masterJenisLaporan = ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
+            }
 
             const mainTitle = s.mainTitle || "PT.ALEXINDO PLANT 2";
             const yellowSubTitle = s.yellowSubTitle || "MANAJEMEN PERBAIKAN";
@@ -1917,6 +1936,7 @@
 
             populateMesinDropdowns();
             populateSatuanDropdowns();
+            populateJenisDropdowns();
             populateCmdPersonelDropdown();
             renderMasterTags();
 
@@ -2030,6 +2050,38 @@
             }
         }
 
+        function getJenisIcon(label) {
+            const low = String(label || '').toLowerCase();
+            if (low.includes('cek') || low.includes('kontrol') || low.includes('inspeksi')) return '🔍';
+            if (low.includes('rutin') || low.includes('preventive') || low.includes('pm')) return '🔄';
+            return '🛠️';
+        }
+
+        function populateJenisDropdowns() {
+            const listJenis = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
+            const elLap = document.getElementById('lap-jenis-kegiatan');
+            if (elLap) {
+                const cur = elLap.value;
+                elLap.innerHTML = listJenis.map(j => `<option value="${escapeHtml(j)}">${getJenisIcon(j)} ${escapeHtml(j)}</option>`).join('');
+                if (cur) {
+                    const found = Array.from(elLap.options).find(o => o.value.toLowerCase() === cur.toLowerCase());
+                    if (found) elLap.value = found.value;
+                }
+            }
+            const elFilter = document.getElementById('filter-jenis-laporan');
+            if (elFilter) {
+                const curF = elFilter.value || 'ALL';
+                const allText = (typeof currentLang !== 'undefined' && currentLang === 'en') ? 'All Types' : 'Semua Jenis';
+                elFilter.innerHTML = `<option value="ALL">${allText}</option>` + listJenis.map(j => `<option value="${escapeHtml(j)}">${getJenisIcon(j)} ${escapeHtml(j)}</option>`).join('');
+                if (curF === 'ALL') {
+                    elFilter.value = 'ALL';
+                } else {
+                    const foundF = Array.from(elFilter.options).find(o => o.value.toLowerCase() === curF.toLowerCase());
+                    if (foundF) elFilter.value = foundF.value;
+                }
+            }
+        }
+
         function populateSatuanDropdowns() {
             const listSatuan = cloudData.settings.masterSatuan || ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"];
             ['lap-satuan', 'part-satuan', 'pp-satuan'].forEach(id => {
@@ -2046,19 +2098,72 @@
             const isMaster = isUserMasterAdmin();
             const listMesin = cloudData.settings.masterMesin || [];
             const listSatuan = cloudData.settings.masterSatuan || [];
+            const listJenis = cloudData.settings.masterJenisLaporan || [];
 
             const containerMesin = document.getElementById('list-mesin-tags');
             const containerSatuan = document.getElementById('list-satuan-tags');
+            const containerJenis = document.getElementById('list-jenis-tags');
 
             if(containerMesin) {
                 containerMesin.innerHTML = listMesin.map((m, idx) => `
-                    <span class="tag-badge">⚙️ ${m} ${isMaster ? `<button class="btn-remove-tag" onclick="hapusMesinMaster(${idx})">&times;</button>` : ''}</span>
+                    <span class="tag-badge">⚙️ ${escapeHtml(m)} ${isMaster ? `<button type="button" class="btn-remove-tag" onclick="hapusMesinMaster(${idx})">&times;</button>` : ''}</span>
                 `).join('');
             }
             if(containerSatuan) {
                 containerSatuan.innerHTML = listSatuan.map((s, idx) => `
-                    <span class="tag-badge">📏 ${s} ${isMaster ? `<button class="btn-remove-tag" onclick="hapusSatuanMaster(${idx})">&times;</button>` : ''}</span>
+                    <span class="tag-badge">📏 ${escapeHtml(s)} ${isMaster ? `<button type="button" class="btn-remove-tag" onclick="hapusSatuanMaster(${idx})">&times;</button>` : ''}</span>
                 `).join('');
+            }
+            if(containerJenis) {
+                containerJenis.innerHTML = listJenis.map((j, idx) => `
+                    <span class="tag-badge">${getJenisIcon(j)} ${escapeHtml(j)} ${isMaster ? `<button type="button" style="cursor:pointer; color:#003399; border:none; background:transparent; font-size:12px; margin-left:4px;" title="Edit Nama Jenis" onclick="editJenisMaster(${idx})"><i class="fa-solid fa-pen"></i></button><button type="button" class="btn-remove-tag" title="Hapus" onclick="hapusJenisMaster(${idx})">&times;</button>` : ''}</span>
+                `).join('');
+            }
+        }
+
+        function tambahJenisMaster() {
+            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
+            const input = document.getElementById('input-new-jenis');
+            const val = input.value.trim();
+            if(!val) return;
+
+            if(!cloudData.settings.masterJenisLaporan) cloudData.settings.masterJenisLaporan = [];
+            const exists = cloudData.settings.masterJenisLaporan.some(x => x.toLowerCase() === val.toLowerCase());
+            if(!exists) {
+                cloudData.settings.masterJenisLaporan.push(val);
+                input.value = "";
+                saveLocalAppData();
+                applySettingsToUI();
+                sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
+            } else {
+                alert("Jenis laporan tersebut sudah ada dalam daftar!");
+            }
+        }
+
+        function editJenisMaster(index) {
+            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
+            const listJenis = cloudData.settings.masterJenisLaporan || [];
+            const oldVal = listJenis[index];
+            if(!oldVal) return;
+            const newVal = prompt("Edit nama Jenis Laporan / Pekerjaan:", oldVal);
+            if(newVal === null) return;
+            const trimmed = newVal.trim();
+            if(!trimmed) { alert("Nama jenis laporan tidak boleh kosong!"); return; }
+            cloudData.settings.masterJenisLaporan[index] = trimmed;
+            saveLocalAppData();
+            applySettingsToUI();
+            sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
+        }
+
+        function hapusJenisMaster(index) {
+            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
+            const listJenis = cloudData.settings.masterJenisLaporan || [];
+            if(listJenis.length <= 1) { alert("Minimal harus tersisa 1 jenis laporan!"); return; }
+            if(confirm(`Hapus jenis laporan "${listJenis[index]}" dari master pilihan?`)) {
+                cloudData.settings.masterJenisLaporan.splice(index, 1);
+                saveLocalAppData();
+                applySettingsToUI();
+                sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
             }
         }
 
@@ -2320,12 +2425,67 @@
             document.getElementById('sidebar-overlay').classList.remove('show');
         }
 
-        /* SISTEM LOGIN */
+        /* SISTEM LOGIN & PROTEKSI KEAMANAN KETAT */
+        let failedLoginCount = 0;
+        let loginLockUntil = 0;
+
+        // Proteksi anti-inspeksi kode sumber (blokir klik kanan & shortcut DevTools bagi non-admin)
+        document.addEventListener('contextmenu', function(e) {
+            if (!isUserMasterAdmin()) e.preventDefault();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (isUserMasterAdmin()) return;
+            const key = e.key ? e.key.toUpperCase() : '';
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && (key === 'I' || key === 'J' || key === 'C')) ||
+                (e.ctrlKey && (key === 'U' || key === 'S'))
+            ) {
+                e.preventDefault();
+            }
+        });
+
+        function isExactNameMatch(inputRaw, dbRaw) {
+            const cleanWord = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const inputParts = String(inputRaw || '').trim().split(/\s+/).map(cleanWord).filter(Boolean);
+            const dbParts = String(dbRaw || '').trim().split(/\s+/).map(cleanWord).filter(Boolean);
+
+            if (inputParts.length === 0 || dbParts.length === 0) return false;
+
+            const inputJoined = inputParts.join('');
+            const dbJoined = dbParts.join('');
+
+            // 1. Nama lengkap persis sama (misal: "Deden Sutandi" === "Deden Sutandi")
+            if (inputJoined === dbJoined) return true;
+
+            // 2. Satu kata input harus persis sama dengan Nama Depan ATAU Nama Belakang (bukan sebagian huruf)
+            if (inputParts.length === 1) {
+                const single = inputParts[0];
+                const firstName = dbParts[0];
+                const lastName = dbParts[dbParts.length - 1];
+                return single === firstName || single === lastName;
+            }
+
+            // 3. Jika 2+ kata, cek kombinasi Nama Depan + Nama Belakang persis
+            if (inputParts.length === 2 && dbParts.length >= 2) {
+                return inputParts[0] === dbParts[0] && inputParts[1] === dbParts[dbParts.length - 1];
+            }
+
+            return false;
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
+
+            const now = Date.now();
+            if (now < loginLockUntil) {
+                const sisaDetik = Math.ceil((loginLockUntil - now) / 1000);
+                alert(`🔒 Terlalu banyak percobaan login gagal! Tunggu ${sisaDetik} detik lagi.`);
+                return;
+            }
+
             let rawName = document.getElementById('username').value.trim();
             let passInput = document.getElementById('password').value.trim();
-            let normInputName = normalizeString(rawName);
 
             if (!rawName || !passInput) { alert("Nama Pengguna dan PIN Keamanan wajib diisi!"); return; }
 
@@ -2345,23 +2505,16 @@
                 let karyawanList = (cloudData.karyawan && cloudData.karyawan.length > 0) ? cloudData.karyawan : [];
 
                 const findUserMatch = (list) => {
-                    let user = list.find(k => {
-                        let dbNamaFull = normalizeString(k.nama);
-                        let dbNamaDepan = dbNamaFull.split(' ')[0];
-                        let nameMatches = (dbNamaFull === normInputName || dbNamaDepan === normInputName || dbNamaFull.startsWith(normInputName) || normInputName.startsWith(dbNamaDepan));
-                        let pinMatches = (k.pin !== undefined && k.pin !== null && String(k.pin).trim() === passInput);
+                    return list.find(k => {
+                        let nameMatches = isExactNameMatch(rawName, k.nama);
+                        let pinMatches = (k.pin !== undefined && k.pin !== null && String(k.pin).trim() !== "" && String(k.pin).trim() === passInput);
                         return nameMatches && pinMatches;
                     });
-                    if (!user) {
-                        let pinOnly = list.find(k => k.pin !== undefined && k.pin !== null && String(k.pin).trim() === passInput);
-                        if (pinOnly) return { nama: rawName };
-                    }
-                    return user;
                 };
 
                 let matchedUser = findUserMatch(karyawanList);
 
-                // Jika belum cocok di cache lokal (misal habis update koding/PIN berubah), paksa tarik ulang dari Google Sheets
+                // Jika belum cocok di cache lokal, paksa tarik ulang dari Google Sheets
                 if (!matchedUser) {
                     await fetchDataFromSheets(true);
                     karyawanList = (cloudData.karyawan && cloudData.karyawan.length > 0) ? cloudData.karyawan : [];
@@ -2370,21 +2523,39 @@
 
                 if (karyawanList.length === 0) {
                     if (passInput === MASTER_EMERGENCY_PIN) {
-                        alert(`Selamat datang! Anda masuk menggunakan Master PIN Default (${MASTER_EMERGENCY_PIN}).`);
+                        const s = cloudData.settings || {};
+                        const masterArr = (s.masterNames || "Akim, Deden").split(',').map(n => n.trim()).filter(Boolean);
+                        const isMasterMatch = masterArr.some(m => isExactNameMatch(rawName, m));
+                        if (!isMasterMatch) {
+                            failedLoginCount++;
+                            alert("Akses Ditolak! Nama tidak sesuai dengan daftar Master Admin awal.");
+                            return;
+                        }
+                        failedLoginCount = 0;
+                        alert(`Selamat datang! Anda masuk menggunakan Master PIN Default.`);
                         currentUser = rawName;
                         grantAccess();
                         return;
                     } else {
-                        alert("Akses Ditolak! Gunakan Master PIN '1234' untuk login awal.");
+                        failedLoginCount++;
+                        alert("Akses Ditolak! Gunakan Nama Master Admin & PIN awal yang benar.");
                         return;
                     }
                 }
 
                 if (!matchedUser) {
-                    alert("PIN Keamanan SALAH atau Nama Pengguna tidak terdaftar!");
+                    failedLoginCount++;
+                    if (failedLoginCount >= 5) {
+                        loginLockUntil = Date.now() + 60000;
+                        failedLoginCount = 0;
+                        alert("🔒 Akses Diblokir Sementara (60 Detik) karena 5x gagal verifikasi Nama & PIN!");
+                    } else {
+                        alert(`❌ Akses Ditolak! Penulisan Nama (Nama Depan / Belakang / Lengkap) atau PIN tidak sesuai. (Percobaan ${failedLoginCount}/5)`);
+                    }
                     return;
                 }
 
+                failedLoginCount = 0;
                 currentUser = matchedUser.nama;
                 grantAccess();
             } finally {
@@ -3462,19 +3633,39 @@
             let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
             let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
             if(document.getElementById('lap-jenis-kegiatan')) {
+                const selJenis = document.getElementById('lap-jenis-kegiatan');
+                const listJenis = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
                 if(matchJenis) {
-                    let jVal = matchJenis[1].trim().toUpperCase();
-                    if (jVal === 'PERBAIKAN') jVal = 'PEKERJAAN';
-                    document.getElementById('lap-jenis-kegiatan').value = jVal;
+                    let jRaw = matchJenis[1].trim();
+                    let foundOpt = Array.from(selJenis.options).find(o => o.value.toLowerCase() === jRaw.toLowerCase());
+                    if (!foundOpt) {
+                        if (jRaw.toUpperCase() === 'PEKERJAAN' || jRaw.toUpperCase() === 'PERBAIKAN') {
+                            foundOpt = Array.from(selJenis.options).find(o => /pekerjaan|perbaikan/i.test(o.value));
+                        } else if (jRaw.toUpperCase() === 'PENGECEKAN') {
+                            foundOpt = Array.from(selJenis.options).find(o => /pengecekan|kontrol/i.test(o.value));
+                        } else if (jRaw.toUpperCase() === 'RUTIN') {
+                            foundOpt = Array.from(selJenis.options).find(o => /rutin|preventive/i.test(o.value));
+                        }
+                    }
+                    if (foundOpt) {
+                        selJenis.value = foundOpt.value;
+                    } else {
+                        const tmpOpt = document.createElement('option');
+                        tmpOpt.value = jRaw;
+                        tmpOpt.textContent = `${getJenisIcon(jRaw)} ${jRaw}`;
+                        selJenis.appendChild(tmpOpt);
+                        selJenis.value = jRaw;
+                    }
                 } else {
                     let lowKet = rawKet.toLowerCase();
+                    let targetOpt = null;
                     if (lowKet.includes('rutin') || lowKet.includes('preventive') || lowKet.includes('greasing') || lowKet.includes('cleaning')) {
-                        document.getElementById('lap-jenis-kegiatan').value = 'RUTIN';
+                        targetOpt = Array.from(selJenis.options).find(o => /rutin|preventive/i.test(o.value));
                     } else if (lowKet.includes('cek') || lowKet.includes('pengecekan') || lowKet.includes('kontrol') || lowKet.includes('monitoring') || lowKet.includes('inspeksi')) {
-                        document.getElementById('lap-jenis-kegiatan').value = 'PENGECEKAN';
-                    } else {
-                        document.getElementById('lap-jenis-kegiatan').value = 'PEKERJAAN';
+                        targetOpt = Array.from(selJenis.options).find(o => /pengecekan|kontrol/i.test(o.value));
                     }
+                    if (!targetOpt && selJenis.options.length > 0) targetOpt = selJenis.options[0];
+                    if (targetOpt) selJenis.value = targetOpt.value;
                 }
             }
             if(matchEquip) document.getElementById('lap-equipment').value = matchEquip[1];
@@ -3761,21 +3952,31 @@
 
                 let rawKetStr = String(item.ket || '');
                 let matchJenis = rawKetStr.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let detectedJenis = 'PEKERJAAN';
+                let listJenisMaster = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
+                let detectedJenis = listJenisMaster[0] || 'Pekerjaan / Perbaikan';
                 if (matchJenis) {
-                    let jRaw = matchJenis[1].trim().toUpperCase();
-                    if (jRaw === 'PENGECEKAN') detectedJenis = 'PENGECEKAN';
-                    else if (jRaw === 'RUTIN') detectedJenis = 'RUTIN';
-                    else detectedJenis = 'PEKERJAAN';
+                    let jRaw = matchJenis[1].trim();
+                    let jUp = jRaw.toUpperCase();
+                    if (jUp === 'PEKERJAAN' || jUp === 'PERBAIKAN') {
+                        detectedJenis = listJenisMaster.find(x => /pekerjaan|perbaikan/i.test(x)) || jRaw;
+                    } else if (jUp === 'PENGECEKAN') {
+                        detectedJenis = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || jRaw;
+                    } else if (jUp === 'RUTIN') {
+                        detectedJenis = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || jRaw;
+                    } else {
+                        detectedJenis = jRaw;
+                    }
                 } else {
                     let gabungTeks = `${rawKetStr} ${item.partText || ''}`.toLowerCase();
-                    if (gabungTeks.includes('rutin') || gabungTeks.includes('preventive')) detectedJenis = 'RUTIN';
-                    else if (gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi')) detectedJenis = 'PENGECEKAN';
+                    if (gabungTeks.includes('rutin') || gabungTeks.includes('preventive')) {
+                        detectedJenis = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
+                    } else if (gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi')) {
+                        detectedJenis = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
+                    }
                 }
                 
                 if (jenisFilter !== 'ALL') {
-                    let targetJ = (jenisFilter === 'PERBAIKAN') ? 'PEKERJAAN' : jenisFilter;
-                    if (detectedJenis !== targetJ) return false;
+                    if (detectedJenis.toLowerCase() !== jenisFilter.toLowerCase()) return false;
                 }
 
                 return `${rawItemTgl} ${formatTanggalIndo(item.tanggal)} ${item.shift} ${item.mesin} ${item.personel} ${item.partText} ${item.jamMulai} ${item.ket}`.toLowerCase().includes(searchKeyword);
@@ -3790,24 +3991,33 @@
             filteredList.forEach(item => {
                 let rawKet = item.ket || "";
                 let matchJenis = rawKet.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let badgeJenis = 'PEKERJAAN';
+                let listJenisMaster = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
+                let badgeLabel = listJenisMaster[0] || 'Pekerjaan / Perbaikan';
                 if (matchJenis) {
-                    let jRaw = matchJenis[1].trim().toUpperCase();
-                    if (jRaw === 'PENGECEKAN') badgeJenis = 'PENGECEKAN';
-                    else if (jRaw === 'RUTIN') badgeJenis = 'RUTIN';
+                    let jRaw = matchJenis[1].trim();
+                    let jUp = jRaw.toUpperCase();
+                    if (jUp === 'PEKERJAAN' || jUp === 'PERBAIKAN') {
+                        badgeLabel = listJenisMaster.find(x => /pekerjaan|perbaikan/i.test(x)) || 'Pekerjaan / Perbaikan';
+                    } else if (jUp === 'PENGECEKAN') {
+                        badgeLabel = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
+                    } else if (jUp === 'RUTIN') {
+                        badgeLabel = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
+                    } else {
+                        badgeLabel = jRaw;
+                    }
                 } else {
-                    if (/rutin|preventive/i.test(rawKet)) badgeJenis = 'RUTIN';
-                    else if (/cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet)) badgeJenis = 'PENGECEKAN';
+                    if (/rutin|preventive/i.test(rawKet)) badgeLabel = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
+                    else if (/cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet)) badgeLabel = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
                 }
-                let isEngLang = (typeof currentLang !== 'undefined' && currentLang === 'en');
-                let jenisBadge = '';
-                if (badgeJenis === 'PENGECEKAN') {
-                    jenisBadge = `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔍 ${isEngLang ? 'Inspection' : 'Pengecekan'}</span>`;
-                } else if (badgeJenis === 'RUTIN') {
-                    jenisBadge = `<span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔄 ${isEngLang ? 'Routine' : 'Rutin'}</span>`;
-                } else {
-                    jenisBadge = `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🛠️ ${isEngLang ? 'Repair / Work' : 'Pekerjaan'}</span>`;
+                let badgeStyle = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;';
+                if (/cek|kontrol|inspeksi/i.test(badgeLabel)) {
+                    badgeStyle = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
+                } else if (/rutin|preventive|pm/i.test(badgeLabel)) {
+                    badgeStyle = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
+                } else if (!/pekerjaan|perbaikan/i.test(badgeLabel)) {
+                    badgeStyle = 'background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff;';
                 }
+                let jenisBadge = `<span style="${badgeStyle} padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">${getJenisIcon(badgeLabel)} ${escapeHtml(badgeLabel)}</span>`;
 
                 let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
@@ -5097,6 +5307,7 @@
             currentLang = (lang === 'en') ? 'en' : 'id';
             localStorage.setItem('app_language', currentLang);
             applyLanguageDOM(currentLang);
+            if (typeof populateJenisDropdowns === 'function') populateJenisDropdowns();
             if (typeof renderHistoriTable === 'function') renderHistoriTable();
         }
 
