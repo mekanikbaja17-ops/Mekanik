@@ -4,6 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="page-title-meta">Sistem Manajemen Operasional & Inventory</title>
+    <!-- PWA Manifest & Mobile App Config (Auto-Install 1 Klik) -->
+    <meta name="theme-color" content="#003399">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sistem Operasional">
+    <link rel="manifest" id="pwa-manifest-placeholder">
+
+    <script>
+        (function setupPWA() {
+            function createPngIcon(size) {
+                const c = document.createElement('canvas');
+                c.width = size;
+                c.height = size;
+                const ctx = c.getContext('2d');
+                // Background rounded rect
+                const r = size * 0.18;
+                ctx.fillStyle = '#003399';
+                ctx.beginPath();
+                ctx.moveTo(r, 0);
+                ctx.arcTo(size, 0, size, size, r);
+                ctx.arcTo(size, size, 0, size, r);
+                ctx.arcTo(0, size, 0, 0, r);
+                ctx.arcTo(0, 0, size, 0, r);
+                ctx.closePath();
+                ctx.fill();
+
+                // Yellow gear/ring
+                ctx.strokeStyle = '#ffc107';
+                ctx.lineWidth = size * 0.07;
+                ctx.beginPath();
+                ctx.arc(size / 2, size / 2, size * 0.28, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // White cross
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = size * 0.07;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(size / 2, size * 0.27);
+                ctx.lineTo(size / 2, size * 0.73);
+                ctx.moveTo(size * 0.27, size / 2);
+                ctx.lineTo(size * 0.73, size / 2);
+                ctx.stroke();
+
+                return c.toDataURL('image/png');
+            }
+
+            const icon192 = createPngIcon(192);
+            const icon512 = createPngIcon(512);
+            const cleanUrl = window.location.href.split('#')[0];
+
+            const manifestObj = {
+                id: cleanUrl,
+                name: "Sistem Operasional & Inventory",
+                short_name: "Operasional App",
+                description: "Sistem Manajemen Operasional, Maintenance & Inventory Spare Part",
+                start_url: cleanUrl,
+                scope: cleanUrl.substring(0, cleanUrl.lastIndexOf('/') + 1),
+                display: "standalone",
+                orientation: "any",
+                background_color: "#002266",
+                theme_color: "#003399",
+                icons: [
+                    { src: icon192, sizes: "192x192", type: "image/png", purpose: "any" },
+                    { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" }
+                ]
+            };
+
+            const manifestJson = JSON.stringify(manifestObj);
+            const manifestDataUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(manifestJson);
+            const linkEl = document.getElementById('pwa-manifest-placeholder');
+            if (linkEl) linkEl.setAttribute('href', manifestDataUrl);
+
+            if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                const swCode = `
+                    self.addEventListener('install', (e) => { self.skipWaiting(); });
+                    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+                    self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => new Response('Offline'))); });
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            }
+        })();
+    </script>
+
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js dan Plugin ChartDataLabels -->
@@ -31,6 +117,34 @@
             height: 100vh;
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
+        }
+
+
+        /* LANGUAGE SWITCHER IN/ENG */
+        .lang-switcher {
+            display: inline-flex;
+            align-items: center;
+            background: #e2e8f0;
+            border-radius: 20px;
+            padding: 2px;
+            border: 1px solid #cbd5e1;
+            gap: 2px;
+        }
+        .lang-btn {
+            border: none;
+            background: transparent;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .lang-btn.active {
+            background: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
         }
 
         /* LOGIN CONTAINER */
@@ -449,7 +563,13 @@
 
     <!-- LOGIN SCREEN -->
     <div id="login-container">
-        <div class="login-card">
+        <div class="login-card" style="position:relative;">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <div class="lang-switcher" title="Pilih Bahasa / Select Language">
+                    <button type="button" class="lang-btn lang-btn-id active" onclick="setLanguage('id')">🇮🇩 IN</button>
+                    <button type="button" class="lang-btn lang-btn-en" onclick="setLanguage('en')">🇬🇧 ENG</button>
+                </div>
+            </div>
             <div class="login-logo-container" id="login-logo-box">
                 <i class="fa-solid fa-lock" id="login-default-icon"></i>
                 <img id="login-logo-img" src="" alt="Logo" style="display:none;">
@@ -466,6 +586,9 @@
                     <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="btn-primary">VERIFIKASI & MASUK</button>
+                <button type="button" id="btn-login-install-app" onclick="triggerInstallAppDirect()" style="margin-top:10px; width:100%; padding:10px; background:#003399; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <i class="fa-solid fa-mobile-screen-button"></i> <span id="lbl-login-install">PASANG APLIKASI DI HP / DESKTOP</span>
+                </button>
             </form>
         </div>
     </div>
@@ -478,7 +601,13 @@
                 <button class="mobile-toggle-btn" onclick="toggleMobileSidebar()"><i class="fa-solid fa-bars"></i></button>
                 <span style="font-size:14px; font-weight:bold;" id="mobile-brand-title">SISTEM OPERASIONAL</span>
             </div>
-            <span class="sync-badge" id="mobile-sync-status">🟢 LIVE</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div class="lang-switcher">
+                    <button type="button" class="lang-btn lang-btn-id active" onclick="setLanguage('id')">IN</button>
+                    <button type="button" class="lang-btn lang-btn-en" onclick="setLanguage('en')">ENG</button>
+                </div>
+                <span class="sync-badge" id="mobile-sync-status">🟢 LIVE</span>
+            </div>
         </div>
         <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
 
@@ -521,6 +650,10 @@
                 <button class="tab-btn" id="btn-tab-pengaturan" onclick="switchTab(event, 'tab-pengaturan')">
                     <span class="tab-btn-left"><i class="fa-solid fa-gear"></i> <span id="nav-lbl-pengaturan">PENGATURAN MASTER ADMIN</span></span>
                 </button>
+                <button class="tab-btn" id="btn-tab-install" onclick="triggerInstallAppDirect()" style="margin-top: 6px; background: rgba(40, 167, 69, 0.22); border: 1px solid rgba(40, 167, 69, 0.6);">
+                    <span class="tab-btn-left"><i class="fa-solid fa-download" style="color:#4ade80;"></i> <span id="nav-lbl-install">PASANG APLIKASI</span></span>
+                    <span id="badge-install-ready" style="background:#28a745; color:#fff; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:bold;">APP</span>
+                </button>
             </div>
         </aside>
 
@@ -537,6 +670,10 @@
                     <p id="header-sub-title">Dashboard Monitoring & Laporan Kerja</p>
                 </div>
                 <div class="user-profile">
+                    <div class="lang-switcher" title="Ganti Bahasa / Switch Language">
+                        <button type="button" class="lang-btn lang-btn-id active" onclick="setLanguage('id')">🇮🇩 IN</button>
+                        <button type="button" class="lang-btn lang-btn-en" onclick="setLanguage('en')">🇬🇧 ENG</button>
+                    </div>
                     <span id="user-display-name" style="color:var(--primary-color);"></span>
                     <button class="btn-logout" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
                 </div>
@@ -563,8 +700,9 @@
                                 <div class="form-group">
                                     <label>Jenis Laporan</label>
                                     <select id="lap-jenis-kegiatan" style="font-weight:bold;">
-                                        <option value="PEKERJAAN">🛠️ Pekerjaan / Perbaikan</option>
-                                        <option value="PENGECEKAN">🔍 Pengecekan / Kontrol</option>
+                                        <option value="PEKERJAAN" id="opt-jenis-pekerjaan">🛠️ Pekerjaan / Perbaikan</option>
+                                        <option value="PENGECEKAN" id="opt-jenis-pengecekan">🔍 Pengecekan / Kontrol</option>
+                                        <option value="RUTIN" id="opt-jenis-rutin">🔄 Pekerjaan Rutin / Preventive</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -752,9 +890,10 @@
                         
                         <span style="font-weight:bold; margin-left:10px;">Filter Jenis:</span>
                         <select id="filter-jenis-laporan" onchange="renderHistoriTable()" style="font-weight:bold;">
-                            <option value="ALL">Semua Jenis</option>
-                            <option value="PEKERJAAN">🛠️ Pekerjaan / Perbaikan</option>
-                            <option value="PENGECEKAN">🔍 Pengecekan / Kontrol</option>
+                            <option value="ALL" id="opt-filter-all">Semua Jenis</option>
+                            <option value="PEKERJAAN" id="opt-filter-pekerjaan">🛠️ Pekerjaan / Perbaikan</option>
+                            <option value="PENGECEKAN" id="opt-filter-pengecekan">🔍 Pengecekan / Kontrol</option>
+                            <option value="RUTIN" id="opt-filter-rutin">🔄 Pekerjaan Rutin</option>
                         </select>
                     </div>
 
@@ -934,6 +1073,25 @@
 
                     <div id="sparepart-read-only-notice" style="display:none; background:#e2e8f0; color:#475569; padding:10px; border-radius:6px; margin-bottom:15px; font-weight:bold; font-size:12px;">
                         ℹ️ Anda masuk sebagai Pengguna Biasa. Penambahan & Perubahan stok spare part hanya dapat dilakukan oleh Master Admin.
+                    </div>
+
+                    <div class="downtime-summary" id="sparepart-summary-container" style="margin-bottom:14px;">
+                        <div class="summary-card">
+                            <h4 id="lbl-inv-total-item">Total Item Terdaftar</h4>
+                            <p id="inv-stat-total">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#28a745;">
+                            <h4 id="lbl-inv-stok-aman">Stok Aman (&gt; 2)</h4>
+                            <p id="inv-stat-aman" style="color:#28a745;">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#ffc107;">
+                            <h4 id="lbl-inv-stok-limit">Stok Limit (1 - 2)</h4>
+                            <p id="inv-stat-limit" style="color:#b45309;">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#dc3545;">
+                            <h4 id="lbl-inv-stok-habis">Stok Habis (0)</h4>
+                            <p id="inv-stat-habis" style="color:#dc3545;">0 Item</p>
+                        </div>
                     </div>
 
                     <input type="text" id="search-sparepart" class="search-box" placeholder="🔍 Cari nama part, spesifikasi, lokasi rak, mesin..." onkeyup="renderSparePartTable()">
@@ -1260,6 +1418,40 @@
         </div>
     </div>
 
+    <!-- MODAL PANDUAN PASANG APLIKASI (JIKA BROWSER TIDAK SUPPORT POPUP OTOMATIS / iOS) -->
+    <div id="modal-install-app" class="modal-overlay">
+        <div class="modal-box" style="max-width: 430px;">
+            <div class="modal-header">
+                <h3>📲 Pasang / Instal Aplikasi ke Layar Utama</h3>
+                <button class="modal-close-btn" onclick="tutupModalInstall()">&times;</button>
+            </div>
+            <div id="modal-install-body" style="font-size:13px; line-height:1.6; color:#333;">
+                <p style="margin-bottom:10px;">Aplikasi siap dipasang agar bisa dibuka layar penuh seperti aplikasi asli di Komputer maupun HP:</p>
+                <div style="background:#f1f5f9; padding:12px; border-radius:8px; border-left:4px solid #ffc107; margin-bottom:10px;">
+                    <strong>💻 Komputer / Laptop (Chrome / Edge):</strong><br>
+                    1. Pastikan halaman dibuka lewat link web online (HTTPS, seperti GitHub Pages).<br>
+                    2. Klik ikon <b>Instal (<i class="fa-solid fa-desktop"></i> / +)</b> di ujung kanan kolom alamat URL browser, atau menu <b>Titik Tiga (⋮) &rarr; Simpan dan bagikan &rarr; Instal halaman sebagai aplikasi</b>.<br>
+                    3. Klik <b>Instal</b> (ikon otomatis muncul di Desktop & Start Menu).
+                </div>
+                <div style="background:#f1f5f9; padding:12px; border-radius:8px; border-left:4px solid #003399; margin-bottom:10px;">
+                    <strong>🤖 Android (Chrome / Edge):</strong><br>
+                    1. Ketuk ikon <b>Titik Tiga (⋮)</b> di pojok kanan atas browser.<br>
+                    2. Pilih <b>"Tambahkan ke Layar Utama"</b> atau <b>"Instal Aplikasi"</b>.<br>
+                    3. Tekan <b>Pasang / Install</b>.
+                </div>
+                <div style="background:#f1f5f9; padding:12px; border-radius:8px; border-left:4px solid #28a745;">
+                    <strong>🍎 iPhone / iPad (Safari):</strong><br>
+                    1. Ketuk ikon <b>Bagikan / Share (<i class="fa-solid fa-arrow-up-from-bracket"></i>)</b> di bagian bawah Safari.<br>
+                    2. Geser ke bawah dan pilih <b>"Add to Home Screen" (Tambah ke Layar Utama)</b>.<br>
+                    3. Tekan <b>Add / Tambah</b>.
+                </div>
+            </div>
+            <div class="modal-footer-btns">
+                <button type="button" class="btn-primary" style="width:auto; padding:9px 18px;" onclick="tutupModalInstall()">Mengerti</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL POP-UP KONFIRMASI & INPUT KETERANGAN PEKERJAAN PERSONEL -->
     <div id="modal-konfirmasi-perintah" class="modal-overlay">
         <div class="modal-box">
@@ -1281,6 +1473,63 @@
     </div>
 
     <script>
+        /* ========================================================
+           FITUR PASANG APLIKASI (1 KLIK LANGSUNG POPUP INSTAL PWA)
+           ======================================================== */
+        let deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const badge = document.getElementById('badge-install-ready');
+            if (badge) {
+                badge.innerText = 'SIAP';
+                badge.style.background = '#ffc107';
+                badge.style.color = '#000';
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            const badge = document.getElementById('badge-install-ready');
+            if (badge) {
+                badge.innerText = 'TERPASANG';
+                badge.style.background = '#28a745';
+                badge.style.color = '#fff';
+            }
+            alert('✅ Aplikasi berhasil dipasang di perangkat Anda!');
+        });
+
+        async function triggerInstallAppDirect() {
+            closeMobileSidebar();
+            // Cek jika aplikasi sudah berjalan dalam mode standalone (sudah terinstal)
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                alert('✅ Aplikasi ini sudah terpasang dan sedang berjalan dalam mode Aplikasi!');
+                return;
+            }
+
+            // Jika browser mendukung prompt instalasi otomatis (Chrome/Edge/Android/Desktop)
+            if (deferredInstallPrompt) {
+                try {
+                    deferredInstallPrompt.prompt();
+                    const { outcome } = await deferredInstallPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        deferredInstallPrompt = null;
+                    }
+                    return;
+                } catch (err) {
+                    console.warn('Prompt install error:', err);
+                }
+            }
+
+            // Fallback jika dibuka di Safari iOS atau browser belum memicu beforeinstallprompt
+            document.getElementById('modal-install-app').style.display = 'flex';
+        }
+
+        function tutupModalInstall() {
+            document.getElementById('modal-install-app').style.display = 'none';
+        }
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN2uSTz6slkTEEq8CzPwfLw10jt6tGc1OPFc7k9hFVR2O4O8HgK_mNJ2gDoQz-UKCdmg/exec"; 
         const MASTER_EMERGENCY_PIN = "1234";
 
@@ -1322,6 +1571,7 @@
         let debounceTimer = null;
         let autoSyncInterval = null;
         let isFetching = false;
+        let isSavingData = false;
         let touchStartX = 0;
         let tempLogoBase64 = "";
 
@@ -1396,6 +1646,20 @@
 
         function normalizeString(str) {
             return String(str || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function t(idText, enText) {
+            return (typeof currentLang !== 'undefined' && currentLang === 'en') ? enText : idText;
         }
 
         function isUserMasterAdmin() {
@@ -1562,6 +1826,7 @@
             checkSparepartPermissions();
             checkPerintahAdminPermissions();
             checkDataPPPermissions();
+            if(typeof applyLanguageDOM === "function") applyLanguageDOM(currentLang);
         }
 
         function populateMesinDropdowns() {
@@ -1932,7 +2197,15 @@
             autoSyncInterval = setInterval(() => {
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
-                if(!isTyping) { fetchDataFromSheets(true); }
+                const isModalOpen = document.getElementById('modal-konfirmasi-perintah')?.style.display === 'flex' ||
+                                    document.getElementById('modal-install-app')?.style.display === 'flex';
+                const isEditing = (document.getElementById('edit-id')?.value !== "") ||
+                                  (document.getElementById('edit-pp-id')?.value !== "") ||
+                                  (document.getElementById('edit-part-id')?.value !== "") ||
+                                  (document.getElementById('edit-karyawan-index')?.value !== "");
+                if(!isTyping && !isModalOpen && !isEditing && !isSavingData) {
+                    fetchDataFromSheets(true);
+                }
             }, 10000);
         }
 
@@ -2071,6 +2344,18 @@
             btn.innerText = "MENYIMPAN...";
             btn.disabled = true;
 
+            if(!cloudData.dataPP) cloudData.dataPP = [];
+
+            let prevRecord = null;
+            if(editId) {
+                prevRecord = cloudData.dataPP.find(x => String(x.id) === String(editId)) || null;
+            }
+
+            let isNewDone = (String(done).trim().toUpperCase() === "DONE");
+            let prevSynced = !!(prevRecord && (prevRecord.stokSynced === true || String(prevRecord.done || "").trim().toUpperCase() === "DONE"));
+            let prevSyncedQty = prevRecord ? (prevRecord.syncedQty !== undefined ? (parseInt(prevRecord.syncedQty) || 0) : (prevSynced ? (parseInt(String(prevRecord.qty || "0").split(' ')[0]) || 0) : 0)) : 0;
+            let prevSyncedSpec = prevRecord ? (prevRecord.syncedSpec || prevRecord.specification || "-") : spec;
+
             const rowObj = {
                 id: editId ? parseInt(editId) : Date.now(),
                 item: item,
@@ -2085,27 +2370,39 @@
                 po: po,
                 mrr: mrr,
                 done: done,
-                remark: remark
+                remark: remark,
+                stokSynced: isNewDone,
+                syncedQty: isNewDone ? qtyNum : 0,
+                syncedSpec: isNewDone ? spec : "-"
             };
-
-            if(!cloudData.dataPP) cloudData.dataPP = [];
-
-            let isNewDone = (String(done).trim().toUpperCase() === "DONE");
-            let wasAlreadyDone = false;
 
             if(editId) {
                 const idx = cloudData.dataPP.findIndex(x => String(x.id) === String(editId));
-                if(idx !== -1) {
-                    wasAlreadyDone = (String(cloudData.dataPP[idx].done || "").trim().toUpperCase() === "DONE");
-                    cloudData.dataPP[idx] = rowObj;
-                }
+                if(idx !== -1) cloudData.dataPP[idx] = rowObj;
             } else {
                 cloudData.dataPP.unshift(rowObj);
             }
 
-            // PERBAIKAN: STOK HANYA DITAMBAHKAN JIKA STATUS BERUBAH DARI BELUM SELESAI MENJADI 'DONE' (MENCEGAH DUPLIKASI/PENGURANGAN KEMBALI)
             let stockSyncMsg = "";
-            if(isNewDone && !wasAlreadyDone) {
+            if (!cloudData.sparepart) cloudData.sparepart = [];
+
+            // Kasus A: Status DONE dibatalkan setelah sebelumnya sudah tersinkron ke stok
+            if (!isNewDone && prevSynced && prevSyncedQty > 0) {
+                let prevMatched = findMatchedSparepartsBySpek(prevRecord.item || item, prevSyncedSpec);
+                if (prevMatched.length > 0) {
+                    for (let targetPart of prevMatched) {
+                        targetPart.in = Math.max(0, (parseInt(targetPart.in) || 0) - prevSyncedQty);
+                        let historyArr = [];
+                        try { if(targetPart.historyIn) historyArr = JSON.parse(targetPart.historyIn); } catch(e) { historyArr = []; }
+                        historyArr.push({ tgl: activeTanggal, qty: -prevSyncedQty, ket: `Batal DONE PP: ${noPP}` });
+                        targetPart.historyIn = JSON.stringify(historyArr);
+                        await sendDataToSheets({ action: 'sparepart', type: 'update', row: targetPart });
+                    }
+                    stockSyncMsg = `\n↩️ Status DONE dibatalkan: stok Inventory dikurangi kembali -${prevSyncedQty} ${satuan} (audit PP: ${noPP}).`;
+                }
+            }
+            // Kasus B: Baru menjadi DONE (belum pernah tersinkron)
+            else if (isNewDone && !prevSynced) {
                 let matchedParts = findMatchedSparepartsBySpek(item, spec);
                 if(matchedParts.length > 0) {
                     let syncedLabels = [];
@@ -2120,7 +2417,6 @@
                     }
                     stockSyncMsg = `\n📦 Stok Inventory [${syncedLabels.join(', ')}] otomatis bertambah +${qtyNum} ${satuan} (sinkron berdasarkan Spesifikasi/Type)!`;
                 } else {
-                    // Jika Type / Spesifikasi belum terdaftar di Inventory, otomatis daftarkan sebagai item baru di Inventory!
                     const spekPure = (spec && spec !== "-") ? spec : "-";
                     const spekFull = `${spekPure} [Satuan: ${satuan}] [Lokasi: -]`;
                     const newInvItem = {
@@ -2133,10 +2429,50 @@
                         historyIn: JSON.stringify([{ tgl: activeTanggal, qty: qtyNum, ket: `Auto dari PP: ${noPP}` }]),
                         lastUsedDate: "-"
                     };
-                    if (!cloudData.sparepart) cloudData.sparepart = [];
                     cloudData.sparepart.push(newInvItem);
                     await sendDataToSheets({ action: 'sparepart', type: 'add', row: newInvItem });
                     stockSyncMsg = `\n🆕 Item & Type "${item} (${spekPure})" belum ada di Inventory, sehingga OTOMATIS ditambahkan sebagai item baru dengan stok +${qtyNum} ${satuan}!`;
+                }
+            }
+            // Kasus C: Sudah DONE sebelumnya, dan Qty atau Spesifikasi diubah oleh Master Admin
+            else if (isNewDone && prevSynced && (qtyNum !== prevSyncedQty || normalizeString(spec) !== normalizeString(prevSyncedSpec))) {
+                let oldMatched = findMatchedSparepartsBySpek(prevRecord.item || item, prevSyncedSpec);
+                for (let targetPart of oldMatched) {
+                    targetPart.in = Math.max(0, (parseInt(targetPart.in) || 0) - prevSyncedQty);
+                    let historyArr = [];
+                    try { if(targetPart.historyIn) historyArr = JSON.parse(targetPart.historyIn); } catch(e) { historyArr = []; }
+                    historyArr.push({ tgl: activeTanggal, qty: -prevSyncedQty, ket: `Koreksi PP: ${noPP}` });
+                    targetPart.historyIn = JSON.stringify(historyArr);
+                    await sendDataToSheets({ action: 'sparepart', type: 'update', row: targetPart });
+                }
+
+                let newMatched = findMatchedSparepartsBySpek(item, spec);
+                if (newMatched.length > 0) {
+                    for (let targetPart of newMatched) {
+                        targetPart.in = (parseInt(targetPart.in) || 0) + qtyNum;
+                        let historyArr = [];
+                        try { if(targetPart.historyIn) historyArr = JSON.parse(targetPart.historyIn); } catch(e) { historyArr = []; }
+                        historyArr.push({ tgl: activeTanggal, qty: qtyNum, ket: `Revisi PP: ${noPP}` });
+                        targetPart.historyIn = JSON.stringify(historyArr);
+                        await sendDataToSheets({ action: 'sparepart', type: 'update', row: targetPart });
+                    }
+                    stockSyncMsg = `\n🔄 Audit Stok PP diperbarui: penyesuaian dari ${prevSyncedQty} menjadi ${qtyNum} ${satuan} pada spesifikasi "${spec}".`;
+                } else {
+                    const spekPure = (spec && spec !== "-") ? spec : "-";
+                    const spekFull = `${spekPure} [Satuan: ${satuan}] [Lokasi: -]`;
+                    const newInvItem = {
+                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        name: item,
+                        spek: spekFull,
+                        mesin: machine || "-",
+                        in: qtyNum,
+                        out: 0,
+                        historyIn: JSON.stringify([{ tgl: activeTanggal, qty: qtyNum, ket: `Revisi PP: ${noPP}` }]),
+                        lastUsedDate: "-"
+                    };
+                    cloudData.sparepart.push(newInvItem);
+                    await sendDataToSheets({ action: 'sparepart', type: 'add', row: newInvItem });
+                    stockSyncMsg = `\n🆕 Item & Type baru "${item} (${spekPure})" otomatis ditambahkan dengan stok ${qtyNum} ${satuan} setelah revisi PP.`;
                 }
             }
 
@@ -2279,19 +2615,19 @@
 
                 html += `<tr class="${rowClass}">
                     <td>${idx + 1}</td>
-                    <td><strong>${r.item || '-'}</strong></td>
-                    <td>${r.specification || '-'}</td>
-                    <td><strong>${r.qty || '-'}</strong></td>
-                    <td>${r.description || '-'}</td>
-                    <td><strong>${r.machine || '-'}</strong></td>
-                    <td>${r.priority || '-'}</td>
-                    <td>${formatTanggalIndo(r.datePP)}</td>
-                    <td><strong>${r.noPP || '-'}</strong></td>
+                    <td><strong>${escapeHtml(r.item || '-')}</strong></td>
+                    <td>${escapeHtml(r.specification || '-')}</td>
+                    <td><strong>${escapeHtml(r.qty || '-')}</strong></td>
+                    <td>${escapeHtml(r.description || '-')}</td>
+                    <td><strong>${escapeHtml(r.machine || '-')}</strong></td>
+                    <td>${escapeHtml(r.priority || '-')}</td>
+                    <td>${escapeHtml(formatTanggalIndo(r.datePP))}</td>
+                    <td><strong>${escapeHtml(r.noPP || '-')}</strong></td>
                     <td style="text-align:center;">${purcBadge}</td>
-                    <td><strong>${r.po || '-'}</strong></td>
-                    <td>${r.mrr || '-'}</td>
+                    <td><strong>${escapeHtml(r.po || '-')}</strong></td>
+                    <td>${escapeHtml(r.mrr || '-')}</td>
                     <td><strong>${doneBadge}</strong></td>
-                    <td>${r.remark || '-'}</td>
+                    <td>${escapeHtml(r.remark || '-')}</td>
                     ${actionTd}
                 </tr>`;
             });
@@ -2532,7 +2868,7 @@
                 let rowClickAttr = isBelum ? `style="cursor:pointer;" onclick="bukaModalKonfirmasiPerintah('${c.id}')" title="Klik untuk mengisi keterangan pekerjaan"` : "";
                 
                 let ketPersonelHtml = c.keteranganPersonel 
-                    ? `<div style="margin-top:6px; padding:6px; background:#e8f5e9; border-left:3px solid #28a745; border-radius:4px; color:#1b5e20; font-size:12px;">✍️ <b>Ket. Personel:</b> ${c.keteranganPersonel}</div>` 
+                    ? `<div style="margin-top:6px; padding:6px; background:#e8f5e9; border-left:3px solid #28a745; border-radius:4px; color:#1b5e20; font-size:12px;">✍️ <b>Ket. Personel:</b> ${escapeHtml(c.keteranganPersonel)}</div>` 
                     : "";
 
                 let statusBadge = isBelum 
@@ -2551,10 +2887,10 @@
                 }
 
                 html += `<tr class="${rowClass}" ${rowClickAttr}>
-                    <td><strong>${formatTanggalIndo(c.tanggal)}</strong><br><small>Oleh: <b>${c.masterAdmin}</b></small></td>
-                    <td><strong>👤 ${c.personel}</strong></td>
-                    <td><strong>⚙️ ${c.mesin}</strong><br><small>Equip: <b>${c.equipment}</b></small></td>
-                    <td><strong>Issue:</strong> ${c.issue}<br><div style="margin-top:4px; padding:5px; background:rgba(255,255,255,0.85); border-radius:4px; color:#000;">📋 <b>Perintah:</b> ${c.perintah}</div></td>
+                    <td><strong>${escapeHtml(formatTanggalIndo(c.tanggal))}</strong><br><small>Oleh: <b>${escapeHtml(c.masterAdmin)}</b></small></td>
+                    <td><strong>👤 ${escapeHtml(c.personel)}</strong></td>
+                    <td><strong>⚙️ ${escapeHtml(c.mesin)}</strong><br><small>Equip: <b>${escapeHtml(c.equipment)}</b></small></td>
+                    <td><strong>Issue:</strong> ${escapeHtml(c.issue)}<br><div style="margin-top:4px; padding:5px; background:rgba(255,255,255,0.85); border-radius:4px; color:#000;">📋 <b>Perintah:</b> ${escapeHtml(c.perintah)}</div></td>
                     <td>${statusBadge}</td>
                     <td>${actionBtns}</td>
                 </tr>`;
@@ -2698,6 +3034,17 @@
                 const jamMulaiInput = document.getElementById('lap-jam-mulai').value || "00:00";
                 const jamSelesaiInput = document.getElementById('lap-jam-selesai').value || "00:00";
                 totalMenitDowntime = hitungMenitDariJam(jamMulaiInput, jamSelesaiInput);
+                if (totalMenitDowntime > 720) {
+                    const lanjut = confirm(t(
+                        `Durasi downtime terhitung ${formatMenitKeJam(totalMenitDowntime)} (${jamMulaiInput} - ${jamSelesaiInput}). Apakah benar melewati tengah malam?`,
+                        `Calculated downtime is ${formatMenitKeJam(totalMenitDowntime)} (${jamMulaiInput} - ${jamSelesaiInput}). Did it truly cross midnight?`
+                    ));
+                    if (!lanjut) {
+                        btn.innerText = editId ? t("PERBARUI LAPORAN", "UPDATE REPORT") : t("SIMPAN LAPORAN", "SAVE REPORT");
+                        btn.disabled = false;
+                        return;
+                    }
+                }
                 rangeJamStr = `${jamMulaiInput} - ${jamSelesaiInput}`;
             } else {
                 let inputMenitOnly = parseInt(document.getElementById('lap-total-menit').value) || 0;
@@ -2724,6 +3071,7 @@
                 ket: `[Jenis: ${jenisKegiatan}] [Equip: ${equipment}] [Issue: ${issue}] - ${document.getElementById('lap-keterangan').value || '-'}`
             };
 
+            isSavingData = true;
             try {
                 let sparepartList = (cloudData.sparepart && cloudData.sparepart.length > 0) ? cloudData.sparepart : initialGudangSpareparts;
 
@@ -2765,16 +3113,16 @@
                 }
 
                 if(editId) {
-                    await sendDataToSheets({ action: 'laporan', type: 'delete', id: parseInt(editId) });
                     await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
+                    await sendDataToSheets({ action: 'laporan', type: 'delete', id: parseInt(editId) });
                     const idx = cloudData.laporan.findIndex(i => String(i.id) === String(editId));
                     if (idx !== -1) cloudData.laporan[idx] = laporanData;
-                    alert('BERHASIL! Laporan berhasil diperbarui.');
+                    alert(t('BERHASIL! Laporan berhasil diperbarui.', 'SUCCESS! Work report has been updated.'));
                     cancelEditMode();
                 } else {
                     await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
                     cloudData.laporan.push(laporanData);
-                    alert('BERHASIL! Laporan kerja tersimpan.');
+                    alert(t('BERHASIL! Laporan kerja tersimpan.', 'SUCCESS! Work report has been saved.'));
                 }
 
                 document.getElementById('laporan-form').reset();
@@ -2793,7 +3141,8 @@
             } catch (err) {
                 alert("Gagal menyimpan data: " + err);
             } finally {
-                btn.innerText = "SIMPAN LAPORAN";
+                isSavingData = false;
+                btn.innerText = t("SIMPAN LAPORAN", "SAVE REPORT");
                 btn.disabled = false;
             }
         }
@@ -2827,11 +3176,18 @@
             let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
             if(document.getElementById('lap-jenis-kegiatan')) {
                 if(matchJenis) {
-                    document.getElementById('lap-jenis-kegiatan').value = matchJenis[1].trim().toUpperCase();
+                    let jVal = matchJenis[1].trim().toUpperCase();
+                    if (jVal === 'PERBAIKAN') jVal = 'PEKERJAAN';
+                    document.getElementById('lap-jenis-kegiatan').value = jVal;
                 } else {
                     let lowKet = rawKet.toLowerCase();
-                    let isCek = lowKet.includes('cek') || lowKet.includes('pengecekan') || lowKet.includes('kontrol') || lowKet.includes('monitoring') || lowKet.includes('inspeksi');
-                    document.getElementById('lap-jenis-kegiatan').value = isCek ? 'PENGECEKAN' : 'PEKERJAAN';
+                    if (lowKet.includes('rutin') || lowKet.includes('preventive') || lowKet.includes('greasing') || lowKet.includes('cleaning')) {
+                        document.getElementById('lap-jenis-kegiatan').value = 'RUTIN';
+                    } else if (lowKet.includes('cek') || lowKet.includes('pengecekan') || lowKet.includes('kontrol') || lowKet.includes('monitoring') || lowKet.includes('inspeksi')) {
+                        document.getElementById('lap-jenis-kegiatan').value = 'PENGECEKAN';
+                    } else {
+                        document.getElementById('lap-jenis-kegiatan').value = 'PEKERJAAN';
+                    }
                 }
             }
             if(matchEquip) document.getElementById('lap-equipment').value = matchEquip[1];
@@ -3105,16 +3461,22 @@
 
                 let rawKetStr = String(item.ket || '');
                 let matchJenis = rawKetStr.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let isCek = false;
+                let detectedJenis = 'PEKERJAAN';
                 if (matchJenis) {
-                    isCek = (matchJenis[1].trim().toUpperCase() === 'PENGECEKAN');
+                    let jRaw = matchJenis[1].trim().toUpperCase();
+                    if (jRaw === 'PENGECEKAN') detectedJenis = 'PENGECEKAN';
+                    else if (jRaw === 'RUTIN') detectedJenis = 'RUTIN';
+                    else detectedJenis = 'PEKERJAAN';
                 } else {
                     let gabungTeks = `${rawKetStr} ${item.partText || ''}`.toLowerCase();
-                    isCek = gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi');
+                    if (gabungTeks.includes('rutin') || gabungTeks.includes('preventive')) detectedJenis = 'RUTIN';
+                    else if (gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi')) detectedJenis = 'PENGECEKAN';
                 }
                 
-                if (jenisFilter === 'PENGECEKAN' && !isCek) return false;
-                if ((jenisFilter === 'PEKERJAAN' || jenisFilter === 'PERBAIKAN') && isCek) return false;
+                if (jenisFilter !== 'ALL') {
+                    let targetJ = (jenisFilter === 'PERBAIKAN') ? 'PEKERJAAN' : jenisFilter;
+                    if (detectedJenis !== targetJ) return false;
+                }
 
                 return `${rawItemTgl} ${formatTanggalIndo(item.tanggal)} ${item.shift} ${item.mesin} ${item.personel} ${item.partText} ${item.jamMulai} ${item.ket}`.toLowerCase().includes(searchKeyword);
             });
@@ -3128,10 +3490,24 @@
             filteredList.forEach(item => {
                 let rawKet = item.ket || "";
                 let matchJenis = rawKet.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let isCek = matchJenis ? (matchJenis[1].trim().toUpperCase() === 'PENGECEKAN') : /cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet);
-                let jenisBadge = isCek
-                    ? `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔍 Pengecekan</span>`
-                    : `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🛠️ Pekerjaan</span>`;
+                let badgeJenis = 'PEKERJAAN';
+                if (matchJenis) {
+                    let jRaw = matchJenis[1].trim().toUpperCase();
+                    if (jRaw === 'PENGECEKAN') badgeJenis = 'PENGECEKAN';
+                    else if (jRaw === 'RUTIN') badgeJenis = 'RUTIN';
+                } else {
+                    if (/rutin|preventive/i.test(rawKet)) badgeJenis = 'RUTIN';
+                    else if (/cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet)) badgeJenis = 'PENGECEKAN';
+                }
+                let isEngLang = (typeof currentLang !== 'undefined' && currentLang === 'en');
+                let jenisBadge = '';
+                if (badgeJenis === 'PENGECEKAN') {
+                    jenisBadge = `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔍 ${isEngLang ? 'Inspection' : 'Pengecekan'}</span>`;
+                } else if (badgeJenis === 'RUTIN') {
+                    jenisBadge = `<span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔄 ${isEngLang ? 'Routine' : 'Rutin'}</span>`;
+                } else {
+                    jenisBadge = `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🛠️ ${isEngLang ? 'Repair / Work' : 'Pekerjaan'}</span>`;
+                }
 
                 let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
@@ -3145,14 +3521,14 @@
                 </td>` : '';
 
                 htmlContent += `<tr>
-                    <td><strong>${formatTanggalIndo(item.tanggal)}</strong><br><small style="color:#666;">${item.shift || "-"}</small><br>${jenisBadge}</td>
-                    <td><strong>${item.mesin}</strong></td>
-                    <td><strong>Eq:</strong> ${equipDisplay}<br><strong>Issue:</strong> ${issueDisplay}</td>
-                    <td>${item.personel}</td>
-                    <td>${item.partText}</td>
-                    <td><span style="font-family:monospace; font-weight:bold; color:#003399;">🕒 ${item.jamMulai || "-"}</span></td>
-                    <td><b>${formatMenitKeJam(item.jamSelesai)}</b></td>
-                    <td>${descDisplay}</td>
+                    <td><strong>${escapeHtml(formatTanggalIndo(item.tanggal))}</strong><br><small style="color:#666;">${escapeHtml(item.shift || "-")}</small><br>${jenisBadge}</td>
+                    <td><strong>${escapeHtml(item.mesin)}</strong></td>
+                    <td><strong>Eq:</strong> ${escapeHtml(equipDisplay)}<br><strong>Issue:</strong> ${escapeHtml(issueDisplay)}</td>
+                    <td>${escapeHtml(item.personel)}</td>
+                    <td>${escapeHtml(item.partText)}</td>
+                    <td><span style="font-family:monospace; font-weight:bold; color:#003399;">🕒 ${escapeHtml(item.jamMulai || "-")}</span></td>
+                    <td><b>${escapeHtml(formatMenitKeJam(item.jamSelesai))}</b></td>
+                    <td>${escapeHtml(descDisplay)}</td>
                     ${actionTd}
                 </tr>`;
             });
@@ -3293,6 +3669,21 @@
             const keyword = (document.getElementById('search-sparepart').value || "").toLowerCase();
             let sparepartList = (cloudData.sparepart && cloudData.sparepart.length > 0) ? cloudData.sparepart : initialGudangSpareparts;
 
+            let statTotal = sparepartList.length;
+            let statAman = 0, statLimit = 0, statHabis = 0;
+            sparepartList.forEach(p => {
+                let sQty = (parseInt(p.in) || 0) - (parseInt(p.out) || 0);
+                if (sQty <= 0) statHabis++;
+                else if (sQty <= 2) statLimit++;
+                else statAman++;
+            });
+            const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+            const itemWord = isEn ? 'Items' : 'Item';
+            if (document.getElementById('inv-stat-total')) document.getElementById('inv-stat-total').innerText = `${statTotal} ${itemWord}`;
+            if (document.getElementById('inv-stat-aman')) document.getElementById('inv-stat-aman').innerText = `${statAman} ${itemWord}`;
+            if (document.getElementById('inv-stat-limit')) document.getElementById('inv-stat-limit').innerText = `${statLimit} ${itemWord}`;
+            if (document.getElementById('inv-stat-habis')) document.getElementById('inv-stat-habis').innerText = `${statHabis} ${itemWord}`;
+
             const filteredParts = sparepartList.filter(part => {
                 let historyStr = "";
                 try {
@@ -3346,15 +3737,15 @@
                     : (sisa <= 0 ? `<span style="color:#dc3545; font-weight:bold;">❌ 0 (HABIS)</span>` : `<span style="color:green; font-weight:bold;">${sisa} ${satuanDisplay}</span>`);
 
                 htmlContent += `<tr>
-                    <td><strong>${part.name}</strong></td>
-                    <td>${parsed.cleanSpek}</td>
-                    <td><span class="lokasi-badge">📍 ${parsed.lokasi}</span></td>
-                    <td><span style="color:#003399; font-weight:bold;">${part.mesin || '-'}</span></td>
-                    <td><strong>${satuanDisplay}</strong></td>
-                    <td><b>Total: ${part.in}</b>${historyHtml}</td>
-                    <td>${stokKeluarVal} ${satuanDisplay}</td>
+                    <td><strong>${escapeHtml(part.name)}</strong></td>
+                    <td>${escapeHtml(parsed.cleanSpek)}</td>
+                    <td><span class="lokasi-badge">📍 ${escapeHtml(parsed.lokasi)}</span></td>
+                    <td><span style="color:#003399; font-weight:bold;">${escapeHtml(part.mesin || '-')}</span></td>
+                    <td><strong>${escapeHtml(satuanDisplay)}</strong></td>
+                    <td><b>Total: ${escapeHtml(part.in)}</b>${historyHtml}</td>
+                    <td>${stokKeluarVal} ${escapeHtml(satuanDisplay)}</td>
                     <td>${sisaDisplayHtml}</td>
-                    <td><span style="color:#003399; font-weight:bold;">Input: ${displayTanggalInput}</span><br>${displayTanggalKeluar}</td>
+                    <td><span style="color:#003399; font-weight:bold;">Input: ${escapeHtml(displayTanggalInput)}</span><br>${displayTanggalKeluar}</td>
                     ${adminActionBtns}
                 </tr>`;
             });
@@ -3440,10 +3831,10 @@
 
                 htmlContent += `<tr>
                     <td>${index + 1}</td>
-                    <td><strong>${k.nik || "-"}</strong></td>
-                    <td><strong>${k.nama}</strong></td>
-                    <td>${k.hp || "-"}</td>
-                    <td>${k.jabatan || "-"}</td>
+                    <td><strong>${escapeHtml(k.nik || "-")}</strong></td>
+                    <td><strong>${escapeHtml(k.nama)}</strong></td>
+                    <td>${escapeHtml(k.hp || "-")}</td>
+                    <td>${escapeHtml(k.jabatan || "-")}</td>
                     <td>${statusPinHtml}</td>
                     ${actionTd}
                 </tr>`;
@@ -3555,7 +3946,13 @@
                 .replace(/[“”]/g, '"')
                 .replace(/[‘’]/g, "'")
                 .replace(/[–—]/g, '-')
-                .replace(/[^\x20-\x7E\n]/g, '') // Keep only standard printable ASCII characters
+                // Konversi simbol teknik agar tetap terbaca jelas di font standar jsPDF
+                .replace(/[Øø]/g, 'Dia.')
+                .replace(/±/g, '+/-')
+                .replace(/°/g, ' deg')
+                .replace(/×/g, 'x')
+                .replace(/[µμ]/g, 'u')
+                .replace(/[^\x20-\x7E\n]/g, '') // Keep standard printable ASCII characters
                 .replace(/\s+/g, ' ')
                 .trim();
         }
@@ -4030,6 +4427,374 @@
                 fetchDataFromSheets();
             }
         }
+    
+        /* ========================================================
+           SISTEM DWI-BAHASA (INDONESIA / ENGLISH - IN/ENG)
+           ======================================================== */
+        let currentLang = localStorage.getItem('app_language') || 'id';
+
+        const i18nDict = {
+            id: {
+                // Login
+                "Nama Depan / Nama Karyawan": "Nama Depan / Nama Karyawan",
+                "Masukkan Nama Depan...": "Masukkan Nama Depan...",
+                "VERIFIKASI & MASUK": "VERIFIKASI & MASUK",
+                "Keluar": "Keluar",
+
+                // Sidebar Defaults
+                "LAPORAN HARIAN": "LAPORAN HARIAN",
+                "PERINTAH PEKERJAAN": "PERINTAH PEKERJAAN",
+                "HISTORI & DOWNTIME": "HISTORI & DOWNTIME",
+                "LAPORAN SPARE PART": "LAPORAN SPARE PART",
+                "LAPORAN DOWNTIME": "LAPORAN DOWNTIME",
+                "INVENTORY SPARE PART": "INVENTORY SPARE PART",
+                "DATA PP (PR)": "DATA PP (PR)",
+                "GRAFIK DOWNTIME": "GRAFIK DOWNTIME",
+                "DATA KARYAWAN & PIN": "DATA KARYAWAN & PIN",
+                "PENGATURAN MASTER ADMIN": "PENGATURAN MASTER ADMIN",
+                "PASANG APLIKASI": "PASANG APLIKASI",
+                "PASANG APLIKASI DI HP / DESKTOP": "PASANG APLIKASI DI HP / DESKTOP",
+
+                // Tab 1: Laporan Harian
+                "Form Input Laporan Kerja & Downtime Mesin": "Form Input Laporan Kerja & Downtime Mesin",
+                "Edit Laporan Kerja & Downtime Mesin": "Edit Laporan Kerja & Downtime Mesin",
+                "Pilih Unit Mesin": "Pilih Unit Mesin",
+                "Tanggal Laporan": "Tanggal Laporan",
+                "Jenis Laporan": "Jenis Laporan",
+                "🛠️ Pekerjaan / Perbaikan": "🛠️ Pekerjaan / Perbaikan",
+                "🔍 Pengecekan / Kontrol": "🔍 Pengecekan / Kontrol",
+                "🔄 Pekerjaan Rutin / Preventive": "🔄 Pekerjaan Rutin / Preventive",
+                "Shift Kerja": "Shift Kerja",
+                "Personel / Pelapor": "Personel / Pelapor",
+                "Nama Teknis / Pelapor...": "Nama Teknis / Pelapor...",
+                "Equipment (Komponen Mesin)": "Equipment (Komponen Mesin)",
+                "Misal: Motor Pump, Cylinder, Valve...": "Misal: Motor Pump, Cylinder, Valve...",
+                "Issue Masalah (Kendala)": "Issue Masalah (Kendala)",
+                "Misal: Pressure Drop, Bocor, Macet...": "Misal: Pressure Drop, Bocor, Macet...",
+                "📦 Pilih Part / Material dari Gudang": "📦 Pilih Part / Material dari Gudang",
+                "-- Tidak Menggunakan Part / Pilih Item --": "-- Tidak Menggunakan Part / Pilih Item --",
+                "➕ Lainnya (Ketik Manual Nama & Type)": "➕ Lainnya (Ketik Manual Nama & Type)",
+                "Nama Part Manual": "Nama Part Manual",
+                "Ketik nama manual...": "Ketik nama manual...",
+                "Spesifikasi Part / KODE / Type": "Spesifikasi Part / KODE / Type",
+                "Ketik kode/spesifikasi...": "Ketik kode/spesifikasi...",
+                "Jumlah Qty Keluar": "Jumlah Qty Keluar",
+                "Satuan Part": "Satuan Part",
+                "Mode Input Waktu Downtime": "Mode Input Waktu Downtime",
+                "🕒 Jam Mulai - Selesai": "🕒 Jam Mulai - Selesai",
+                "⏱️ Ketik Total Menit Saja": "⏱️ Ketik Total Menit Saja",
+                "Jam Mulai": "Jam Mulai",
+                "Jam Selesai": "Jam Selesai",
+                "Total Menit Downtime (Jika Lupa Jam Pastinya)": "Total Menit Downtime (Jika Lupa Jam Pastinya)",
+                "Contoh: 45 (menit)": "Contoh: 45 (menit)",
+                "Uraian Perbaikan & Tindakan": "Uraian Perbaikan & Tindakan",
+                "Tuliskan detail tindakan perbaikan...": "Tuliskan detail tindakan perbaikan...",
+                "SIMPAN LAPORAN": "SIMPAN LAPORAN",
+                "PERBARUI LAPORAN": "PERBARUI LAPORAN",
+                "BATALKAN EDIT": "BATALKAN EDIT",
+
+                // Tab 2: Perintah Pekerjaan
+                "🚨 Instruksi & Perintah Pekerjaan dari Master Admin": "🚨 Instruksi & Perintah Pekerjaan dari Master Admin",
+                "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)": "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)",
+                "Ditujukan Kepada Personel": "Ditujukan Kepada Personel",
+                "Unit Mesin": "Unit Mesin",
+                "Issue / Masalah Ditemukan": "Issue / Masalah Ditemukan",
+                "Detail Perintah Pekerjaan": "Detail Perintah Pekerjaan",
+                "📢 KIRIM PERINTAH PEKERJAAN": "📢 KIRIM PERINTAH PEKERJAAN",
+                "Tanggal & Pemberi": "Tanggal & Pemberi",
+                "Personel Tujuan": "Personel Tujuan",
+                "Mesin & Equipment": "Mesin & Equipment",
+                "Issue & Perintah Pekerjaan": "Issue & Perintah Pekerjaan",
+                "Status & Keterangan Personel": "Status & Keterangan Personel",
+                "Aksi / Konfirmasi": "Aksi / Konfirmasi",
+
+                // Tab 3: Histori & Downtime
+                "📅 Periode Bulan:": "📅 Periode Bulan:",
+                "Semua Bulan": "Semua Bulan",
+                "Januari": "Januari", "Februari": "Februari", "Maret": "Maret", "April": "April",
+                "Mei": "Mei", "Juni": "Juni", "Juli": "Juli", "Agustus": "Agustus",
+                "September": "September", "Oktober": "Oktober", "November": "November", "Desember": "Desember",
+                "Rentang Tgl:": "Rentang Tgl:",
+                "s/d": "s/d",
+                "Unit Mesin:": "Unit Mesin:",
+                "Semua Mesin": "Semua Mesin",
+                "Filter Jenis:": "Filter Jenis:",
+                "Semua Jenis": "Semua Jenis",
+                "🔄 Pekerjaan Rutin": "🔄 Pekerjaan Rutin",
+                "Akumulasi Total Downtime Bulanan Per Mesin": "Akumulasi Total Downtime Bulanan Per Mesin",
+                "Histori Kerusakan & Perbaikan": "Histori Kerusakan & Perbaikan",
+                "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...": "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...",
+                "Tanggal & Shift": "Tanggal & Shift",
+                "Mesin": "Mesin",
+                "Personel": "Personel",
+                "Spare Part & Qty": "Spare Part & Qty",
+                "Jam / Waktu Downtime": "Jam / Waktu Downtime",
+                "Durasi Downtime": "Durasi Downtime",
+                "Keterangan": "Keterangan",
+                "Aksi": "Aksi",
+
+                // Tab Laporan Sparepart & Downtime
+                "📦 Rekapitulasi Pemakaian Spare Part": "📦 Rekapitulasi Pemakaian Spare Part",
+                "🔍 Cari nama part, mesin, personel...": "🔍 Cari nama part, mesin, personel...",
+                "Spare Part & Qty Terpakai": "Spare Part & Qty Terpakai",
+                "⏱️ Rekapitulasi Downtime Mesin (> 0 Menit)": "⏱️ Rekapitulasi Downtime Mesin (> 0 Menit)",
+                "🔍 Cari mesin, equipment, issue...": "🔍 Cari mesin, equipment, issue...",
+                "Spare Part Terpakai": "Spare Part Terpakai",
+                "Waktu Downtime": "Waktu Downtime",
+
+                // Tab Inventory Sparepart
+                "Inventory Spare Part Gudang": "Inventory Spare Part Gudang",
+                "➕ Tambah / Edit Spare Part (Master Admin)": "➕ Tambah / Edit Spare Part (Master Admin)",
+                "Nama Item": "Nama Item",
+                "Spesifikasi / Type": "Spesifikasi / Type",
+                "Lokasi Part": "Lokasi Part",
+                "Satuan": "Satuan",
+                "Stok Awal": "Stok Awal",
+                "Simpan": "Simpan",
+                "Batal Edit": "Batal Edit",
+                "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...": "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...",
+                "Total Masuk & Riwayat": "Total Masuk & Riwayat",
+                "Stok Keluar": "Stok Keluar",
+                "Sisa Stok": "Sisa Stok",
+                "Tanggal Input & Keluar": "Tanggal Input & Keluar",
+
+                // Tab Data PP
+                "📋 Monitoring Data PP (Purchase Requisition)": "📋 Monitoring Data PP (Purchase Requisition)",
+                "➕ Input / Edit Data PP (Master Admin)": "➕ Input / Edit Data PP (Master Admin)",
+                "Filter Status PP:": "Filter Status PP:",
+                "Semua Data PP": "Semua Data PP",
+                "⏳ Belum PO / Proses (Merah)": "⏳ Belum PO / Proses (Merah)",
+                "🟡 Sudah PO / Menunggu Barang (Kuning)": "🟡 Sudah PO / Menunggu Barang (Kuning)",
+                "🟢 Selesai / DONE (Hijau)": "🟢 Selesai / DONE (Hijau)",
+
+                // Tab Grafik & Karyawan & Pengaturan
+                "📈 Grafik Tren & Durasi Downtime": "📈 Grafik Tren & Durasi Downtime",
+                "Grafik durasi jam per bulan untuk setiap unit mesin.": "Grafik durasi jam per bulan untuk setiap unit mesin.",
+                "Daftar Personel & Kelola PIN Akses": "Daftar Personel & Kelola PIN Akses",
+                "Nama Lengkap": "Nama Lengkap",
+                "No. Telepon": "No. Telepon",
+                "Jabatan": "Jabatan",
+                "Status Keamanan PIN": "Status Keamanan PIN",
+                "⚙️ Pengaturan Master Admin & Kelola Master Data": "⚙️ Pengaturan Master Admin & Kelola Master Data",
+                "Sistem Operasional & Inventory Terintegrasi": "Sistem Operasional & Inventory Terintegrasi"
+            },
+            en: {
+                // Login
+                "Nama Depan / Nama Karyawan": "First Name / Employee Name",
+                "Masukkan Nama Depan...": "Enter First Name...",
+                "VERIFIKASI & MASUK": "VERIFY & LOGIN",
+                "Keluar": "Logout",
+
+                // Sidebar Defaults
+                "LAPORAN HARIAN": "DAILY REPORT",
+                "PERINTAH PEKERJAAN": "WORK ORDERS",
+                "HISTORI & DOWNTIME": "HISTORY & DOWNTIME",
+                "LAPORAN SPARE PART": "SPARE PART REPORT",
+                "LAPORAN DOWNTIME": "DOWNTIME REPORT",
+                "INVENTORY SPARE PART": "SPARE PART INVENTORY",
+                "DATA PP (PR)": "PR DATA (PURCHASE REQ)",
+                "GRAFIK DOWNTIME": "DOWNTIME CHART",
+                "DATA KARYAWAN & PIN": "EMPLOYEES & PIN",
+                "PENGATURAN MASTER ADMIN": "MASTER ADMIN SETTINGS",
+                "PASANG APLIKASI": "INSTALL APP",
+                "PASANG APLIKASI DI HP / DESKTOP": "INSTALL APP ON PHONE / DESKTOP",
+
+                // Tab 1: Laporan Harian
+                "Form Input Laporan Kerja & Downtime Mesin": "Work Report & Machine Downtime Entry Form",
+                "Edit Laporan Kerja & Downtime Mesin": "Edit Work Report & Machine Downtime",
+                "Pilih Unit Mesin": "Select Machine Unit",
+                "Tanggal Laporan": "Report Date",
+                "Jenis Laporan": "Report Type",
+                "🛠️ Pekerjaan / Perbaikan": "🛠️ Work / Repair",
+                "🔍 Pengecekan / Kontrol": "🔍 Inspection / Check",
+                "🔄 Pekerjaan Rutin / Preventive": "🔄 Routine Work / Preventive",
+                "Shift Kerja": "Work Shift",
+                "Personel / Pelapor": "Personnel / Reporter",
+                "Nama Teknis / Pelapor...": "Technician / Reporter Name...",
+                "Equipment (Komponen Mesin)": "Equipment (Machine Component)",
+                "Misal: Motor Pump, Cylinder, Valve...": "E.g.: Motor Pump, Cylinder, Valve...",
+                "Issue Masalah (Kendala)": "Issue / Problem Description",
+                "Misal: Pressure Drop, Bocor, Macet...": "E.g.: Pressure Drop, Leakage, Jammed...",
+                "📦 Pilih Part / Material dari Gudang": "📦 Select Part / Material from Warehouse",
+                "-- Tidak Menggunakan Part / Pilih Item --": "-- No Part Used / Select Item --",
+                "➕ Lainnya (Ketik Manual Nama & Type)": "➕ Other (Manual Name & Type Entry)",
+                "Nama Part Manual": "Manual Part Name",
+                "Ketik nama manual...": "Type manual part name...",
+                "Spesifikasi Part / KODE / Type": "Part Specification / CODE / Type",
+                "Ketik kode/spesifikasi...": "Type code/specification...",
+                "Jumlah Qty Keluar": "Issued Quantity (Qty)",
+                "Satuan Part": "Part Unit",
+                "Mode Input Waktu Downtime": "Downtime Input Mode",
+                "🕒 Jam Mulai - Selesai": "🕒 Start - End Time",
+                "⏱️ Ketik Total Menit Saja": "⏱️ Enter Total Minutes Only",
+                "Jam Mulai": "Start Time",
+                "Jam Selesai": "End Time",
+                "Total Menit Downtime (Jika Lupa Jam Pastinya)": "Total Downtime Minutes (If Exact Time Unknown)",
+                "Contoh: 45 (menit)": "Example: 45 (minutes)",
+                "Uraian Perbaikan & Tindakan": "Repair & Action Description",
+                "Tuliskan detail tindakan perbaikan...": "Write detailed repair actions...",
+                "SIMPAN LAPORAN": "SAVE REPORT",
+                "PERBARUI LAPORAN": "UPDATE REPORT",
+                "BATALKAN EDIT": "CANCEL EDIT",
+
+                // Tab 2: Perintah Pekerjaan
+                "🚨 Instruksi & Perintah Pekerjaan dari Master Admin": "🚨 Instructions & Work Orders from Master Admin",
+                "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)": "➕ Create & Send New Work Order (Master Admin Only)",
+                "Ditujukan Kepada Personel": "Assigned to Personnel",
+                "Unit Mesin": "Machine Unit",
+                "Issue / Masalah Ditemukan": "Issue / Problem Found",
+                "Detail Perintah Pekerjaan": "Work Order Details",
+                "📢 KIRIM PERINTAH PEKERJAAN": "📢 SEND WORK ORDER",
+                "Tanggal & Pemberi": "Date & Issuer",
+                "Personel Tujuan": "Assigned Personnel",
+                "Mesin & Equipment": "Machine & Equipment",
+                "Issue & Perintah Pekerjaan": "Issue & Work Order",
+                "Status & Keterangan Personel": "Status & Personnel Notes",
+                "Aksi / Konfirmasi": "Action / Confirmation",
+
+                // Tab 3: Histori & Downtime
+                "📅 Periode Bulan:": "📅 Month Period:",
+                "Semua Bulan": "All Months",
+                "Januari": "January", "Februari": "February", "Maret": "March", "April": "April",
+                "Mei": "May", "Juni": "June", "Juli": "July", "Agustus": "August",
+                "September": "September", "Oktober": "October", "November": "November", "Desember": "December",
+                "Rentang Tgl:": "Date Range:",
+                "s/d": "to",
+                "Unit Mesin:": "Machine Unit:",
+                "Semua Mesin": "All Machines",
+                "Filter Jenis:": "Report Type:",
+                "Semua Jenis": "All Types",
+                "🔄 Pekerjaan Rutin": "🔄 Routine Work",
+                "Akumulasi Total Downtime Bulanan Per Mesin": "Monthly Total Downtime Accumulation per Machine",
+                "Histori Kerusakan & Perbaikan": "Breakdown & Repair History",
+                "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...": "🔍 Search keywords (equipment, issue, personnel, etc.)...",
+                "Tanggal & Shift": "Date & Shift",
+                "Mesin": "Machine",
+                "Personel": "Personnel",
+                "Spare Part & Qty": "Spare Part & Qty",
+                "Jam / Waktu Downtime": "Downtime Period",
+                "Durasi Downtime": "Downtime Duration",
+                "Keterangan": "Description",
+                "Aksi": "Action",
+
+                // Tab Laporan Sparepart & Downtime
+                "📦 Rekapitulasi Pemakaian Spare Part": "📦 Spare Part Usage Summary",
+                "🔍 Cari nama part, mesin, personel...": "🔍 Search part name, machine, personnel...",
+                "Spare Part & Qty Terpakai": "Used Spare Part & Qty",
+                "⏱️ Rekapitulasi Downtime Mesin (> 0 Menit)": "⏱️ Machine Downtime Summary (> 0 Mins)",
+                "🔍 Cari mesin, equipment, issue...": "🔍 Search machine, equipment, issue...",
+                "Spare Part Terpakai": "Used Spare Part",
+                "Waktu Downtime": "Downtime Period",
+
+                // Tab Inventory Sparepart
+                "Inventory Spare Part Gudang": "Warehouse Spare Part Inventory",
+                "➕ Tambah / Edit Spare Part (Master Admin)": "➕ Add / Edit Spare Part (Master Admin)",
+                "Nama Item": "Item Name",
+                "Spesifikasi / Type": "Specification / Type",
+                "Lokasi Part": "Part Location",
+                "Satuan": "Unit",
+                "Stok Awal": "Initial Stock",
+                "Simpan": "Save",
+                "Batal Edit": "Cancel Edit",
+                "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...": "🔍 Search part name, spec, rack location, machine...",
+                "Total Masuk & Riwayat": "Total In & History",
+                "Stok Keluar": "Stock Out",
+                "Sisa Stok": "Remaining Stock",
+                "Tanggal Input & Keluar": "In & Out Dates",
+
+                // Tab Data PP
+                "📋 Monitoring Data PP (Purchase Requisition)": "📋 Purchase Requisition (PR) Monitoring",
+                "➕ Input / Edit Data PP (Master Admin)": "➕ Add / Edit PR Data (Master Admin)",
+                "Filter Status PP:": "PR Status Filter:",
+                "Semua Data PP": "All PR Data",
+                "⏳ Belum PO / Proses (Merah)": "⏳ No PO / In Process (Red)",
+                "🟡 Sudah PO / Menunggu Barang (Kuning)": "🟡 PO Issued / Awaiting Delivery (Yellow)",
+                "🟢 Selesai / DONE (Hijau)": "🟢 Completed / DONE (Green)",
+
+                // Tab Grafik & Karyawan & Pengaturan
+                "📈 Grafik Tren & Durasi Downtime": "📈 Downtime Trend & Duration Chart",
+                "Grafik durasi jam per bulan untuk setiap unit mesin.": "Monthly downtime duration chart (in hours) per machine unit.",
+                "Daftar Personel & Kelola PIN Akses": "Personnel List & Access PIN Management",
+                "Nama Lengkap": "Full Name",
+                "No. Telepon": "Phone Number",
+                "Jabatan": "Position",
+                "Status Keamanan PIN": "PIN Security Status",
+                "⚙️ Pengaturan Master Admin & Kelola Master Data": "⚙️ Master Admin Settings & Master Data Management",
+                "Sistem Operasional & Inventory Terintegrasi": "Integrated Operational & Inventory Management System"
+            }
+        };
+
+        const reverseEnToId = {};
+        Object.keys(i18nDict.id).forEach(idKey => {
+            const enVal = i18nDict.en[idKey];
+            if (enVal) reverseEnToId[enVal] = idKey;
+        });
+
+        function applyLanguageDOM(lang) {
+            const targetDict = i18nDict[lang] || i18nDict.id;
+            const selectors = 'label, h3, h4, th, option, button, span, p, div.system-footer';
+            document.querySelectorAll(selectors).forEach(el => {
+                // Hanya ubah elemen yang tidak punya child elemen kompleks (leaf text atau span tunggal)
+                if (el.children.length === 0) {
+                    const txt = el.textContent.trim();
+                    if (!txt) return;
+                    const baseKey = (lang === 'en') ? txt : (reverseEnToId[txt] || txt);
+                    if (targetDict[baseKey]) {
+                        el.textContent = targetDict[baseKey];
+                    }
+                }
+            });
+
+            // Translate placeholders
+            document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+                const ph = el.getAttribute('placeholder');
+                if (!ph) return;
+                const baseKey = (lang === 'en') ? ph : (reverseEnToId[ph] || ph);
+                if (targetDict[baseKey]) {
+                    el.setAttribute('placeholder', targetDict[baseKey]);
+                }
+            });
+
+            // Translate specific labels with nested red asterisks
+            const pinLabel = document.querySelector('#login-form .form-group:nth-child(2) label');
+            if (pinLabel) {
+                pinLabel.innerHTML = lang === 'en'
+                    ? 'Security PIN <span style="color:red;">*REQUIRED</span>'
+                    : 'PIN Keamanan <span style="color:red;">*WAJIB</span>';
+            }
+
+            const cmdNotice = document.getElementById('perintah-info-notice');
+            if (cmdNotice) {
+                cmdNotice.innerHTML = lang === 'en'
+                    ? '⚠️ Red blinking alerts indicate work orders NOT YET COMPLETED. Click the row or <b>"✔️ Completed & Fill Notes"</b> button to log your work notes into History.'
+                    : '⚠️ Pemberitahuan yang berkedip merah menandakan pekerjaan BELUM DIKERJAKAN. Klik baris/tombol <b>"✔️ Dikerjakan & Isi Keterangan"</b> untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.';
+            }
+
+            const bannerEl = document.getElementById('global-perintah-banner');
+            if (bannerEl) {
+                const cnt = document.getElementById('banner-count') ? document.getElementById('banner-count').innerText : '0';
+                bannerEl.innerHTML = lang === 'en'
+                    ? `🚨 ATTENTION! THERE ARE <span id="banner-count">${cnt}</span> NEW WORK ORDERS FROM MASTER ADMIN PENDING ACTION! CLICK HERE TO VIEW & FILL NOTES 🚨`
+                    : `🚨 PERHATIAN! ADA <span id="banner-count">${cnt}</span> PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨`;
+            }
+
+            // Update active state on all IN / ENG buttons
+            document.querySelectorAll('.lang-btn-id').forEach(b => b.classList.toggle('active', lang === 'id'));
+            document.querySelectorAll('.lang-btn-en').forEach(b => b.classList.toggle('active', lang === 'en'));
+            document.documentElement.lang = lang;
+        }
+
+        function setLanguage(lang) {
+            currentLang = (lang === 'en') ? 'en' : 'id';
+            localStorage.setItem('app_language', currentLang);
+            applyLanguageDOM(currentLang);
+            if (typeof renderHistoriTable === 'function') renderHistoriTable();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => applyLanguageDOM(currentLang), 50);
+        });
+
     </script>
 </body>
 </html>
