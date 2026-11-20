@@ -1015,7 +1015,7 @@
                     </div>
 
                     <!-- FORM TAMBAH / EDIT PEKERJAAN PM (1X INPUT UNTUK SETERUSNYA + BISA TAMBAH KAPAN SAJA) -->
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 18px; border: 1px solid #ced4da;">
+                    <div id="admin-pm-form-box" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 18px; border: 1px solid #ced4da;">
                         <h4 id="form-pm-title" style="font-size:13px; color:var(--primary-color); margin-bottom:10px;">➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)</h4>
                         <input type="hidden" id="edit-pm-id" value="">
                         <div class="grid-3">
@@ -1051,6 +1051,10 @@
                             <button type="button" class="btn-primary" id="btn-save-pm" onclick="simpanItemPM()" style="width:auto; padding:10px 20px;">💾 SIMPAN ITEM PREVENTIVE</button>
                             <button type="button" class="btn-action" id="btn-cancel-pm" onclick="cancelEditPM()" style="display:none; background:#6c757d; color:white; padding:10px 16px;">Batal Edit</button>
                         </div>
+                    </div>
+
+                    <div id="pm-operator-notice" style="display:none; background:#e2e8f0; color:#334155; padding:10px 12px; border-radius:6px; margin-bottom:14px; font-size:12px; font-weight:bold;">
+                        ℹ️ Anda masuk sebagai Operator/Personel. Di menu Preventive Maintenance Anda hanya dapat mengerjakan checklist (<b>✔️ Kerjakan</b>); tambah, edit, hapus, atau reset master jadwal khusus Master Admin.
                     </div>
 
                     <!-- FILTER TAMPILAN TABEL PM -->
@@ -2193,6 +2197,7 @@
             checkKaryawanLockStatus();
             checkSparepartPermissions();
             checkPerintahAdminPermissions();
+            checkPreventiveAdminPermissions();
             checkDataPPPermissions();
             if(typeof applyLanguageDOM === "function") applyLanguageDOM(currentLang);
         }
@@ -2465,6 +2470,14 @@
         function checkPerintahAdminPermissions() {
             const cmdBox = document.getElementById('admin-perintah-box');
             if(cmdBox) cmdBox.style.display = isUserMasterAdmin() ? 'block' : 'none';
+        }
+
+        function checkPreventiveAdminPermissions() {
+            const isMaster = isUserMasterAdmin();
+            const pmFormBox = document.getElementById('admin-pm-form-box');
+            const pmNotice = document.getElementById('pm-operator-notice');
+            if (pmFormBox) pmFormBox.style.display = isMaster ? 'block' : 'none';
+            if (pmNotice) pmNotice.style.display = isMaster ? 'none' : 'block';
         }
 
         function checkDataPPPermissions() {
@@ -5140,6 +5153,10 @@
         }
 
         async function simpanItemPM() {
+            if (!isUserMasterAdmin()) {
+                alert("Akses Ditolak! Hanya Master Admin yang berhak menambah atau mengedit jadwal Preventive Maintenance.");
+                return;
+            }
             const editId = document.getElementById('edit-pm-id').value;
             const mesin = document.getElementById('pm-mesin').value;
             const siklus = document.getElementById('pm-siklus').value;
@@ -5213,6 +5230,10 @@
         }
 
         function editItemPM(id) {
+            if (!isUserMasterAdmin()) {
+                alert("Akses Ditolak! Hanya Master Admin yang berhak mengedit item Preventive Maintenance.");
+                return;
+            }
             const list = getCombinedPMMasterList();
             const target = list.find(x => String(x.id) === String(id));
             if (!target) return;
@@ -5241,6 +5262,10 @@
         }
 
         async function hapusItemPM(id) {
+            if (!isUserMasterAdmin()) {
+                alert("Akses Ditolak! Hanya Master Admin yang berhak menghapus item Preventive Maintenance.");
+                return;
+            }
             const target = getCombinedPMMasterList().find(x => String(x.id) === String(id));
             const isTambahan = target && String(target.siklus || "").toUpperCase() === "PEKERJAAN_TAMBAHAN";
             const msg = isTambahan
@@ -5384,6 +5409,10 @@
         }
 
         async function resetStatusPMBulanIni(pmId) {
+            if (!isUserMasterAdmin()) {
+                alert("Akses Ditolak! Hanya Master Admin yang berhak me-reset status Preventive Maintenance.");
+                return;
+            }
             const selBulan = document.getElementById('pm-filter-bulan').value;
             const selTahun = document.getElementById('pm-filter-tahun').value;
             const periodeKey = `${selTahun}-${selBulan}`;
@@ -5411,6 +5440,8 @@
         function renderPreventiveTable() {
             const tbody = document.getElementById('pm-table-body');
             if (!tbody) return;
+            const isMaster = isUserMasterAdmin();
+            checkPreventiveAdminPermissions();
 
             const selBulan = document.getElementById('pm-filter-bulan') ? document.getElementById('pm-filter-bulan').value : getWIBDateString().split('-')[1];
             const selTahun = document.getElementById('pm-filter-tahun') ? document.getElementById('pm-filter-tahun').value : getWIBDateString().split('-')[0];
@@ -5508,20 +5539,24 @@
                 if (doneLog) {
                     statusHtml = `<span style="background:#28a745; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">✅ SELESAI (${namaBulan})</span><br><small style="color:#155724;">Tgl: ${formatTanggalIndo(doneLog.tanggal)}</small>`;
                     pelaksanaHtml = `<strong>👤 ${escapeHtml(doneLog.personel)}</strong><br><small style="color:#333;">${escapeHtml(doneLog.catatan)}</small>`;
-                    actionHtml = `
-                        <button class="btn-action" style="background:#6c757d; color:white;" onclick="resetStatusPMBulanIni('${item.id}')" title="Reset status bulan ini">↩️ Reset</button>
-                        <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
-                        <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
-                    `;
+                    actionHtml = isMaster
+                        ? `
+                            <button class="btn-action" style="background:#6c757d; color:white;" onclick="resetStatusPMBulanIni('${item.id}')" title="Reset status bulan ini">↩️ Reset</button>
+                            <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
+                            <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
+                        `
+                        : `<span style="color:#15803d; font-weight:bold; font-size:11px;">✔️ Selesai Dikerjakan</span>`;
                 } else {
                     statusHtml = isScheduledThisMonth
                         ? `<span style="background:#dc3545; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">⏳ BELUM DIKERJAKAN</span>`
                         : `<span style="background:#e2e8f0; color:#475569; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">⏸️ JADWAL BULAN ${s}</span>`;
-                    actionHtml = `
-                        <button class="btn-action btn-done" onclick="bukaModalKonfirmasiPM('${item.id}')">✔️ Kerjakan</button>
-                        <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
-                        <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
-                    `;
+                    actionHtml = isMaster
+                        ? `
+                            <button class="btn-action btn-done" onclick="bukaModalKonfirmasiPM('${item.id}')">✔️ Kerjakan</button>
+                            <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
+                            <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
+                        `
+                        : `<button class="btn-action btn-done" onclick="bukaModalKonfirmasiPM('${item.id}')">✔️ Kerjakan</button>`;
                 }
 
                 const rowBgStyle = doneLog ? 'style="background-color:#f0fdf4;"' : '';
