@@ -11,6 +11,37 @@
     <meta name="apple-mobile-web-app-title" content="Sistem Operasional">
     <link rel="manifest" id="pwa-manifest-placeholder">
 
+    <!-- MODAL KONFIRMASI PENGERJAAN PREVENTIVE MAINTENANCE -->
+    <div id="modal-konfirmasi-pm" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>✅ Konfirmasi Selesai Preventive Maintenance</h3>
+                <button class="modal-close-btn" onclick="tutupModalPM()">&times;</button>
+            </div>
+            <input type="hidden" id="modal-pm-id" value="">
+            <div id="modal-pm-detail" class="modal-detail-info"></div>
+            <div class="form-group">
+                <label>Tanggal Pelaksanaan</label>
+                <input type="date" id="modal-pm-tanggal" style="font-weight:bold;">
+            </div>
+            <div class="form-group">
+                <label>Nama Teknisi / Pelaksana</label>
+                <input type="text" id="modal-pm-personel" placeholder="Nama teknisi pelaksana...">
+            </div>
+            <div class="form-group">
+                <label>Hasil Pengecekan / Tindakan PM <span style="color:red;">*Wajib</span></label>
+                <textarea id="modal-pm-catatan" rows="3" placeholder="Contoh: Sudah dilakukan greasing, oli normal, kondisi baik..."></textarea>
+            </div>
+            <div style="background:#e8f5e9; padding:8px 10px; border-radius:6px; font-size:11px; color:#1b5e20; margin-bottom:10px;">
+                ℹ️ Otomatis tercatat ke <b>Histori & Downtime</b> dengan kategori <b>Pekerjaan Rutin / Preventive</b>.
+            </div>
+            <div class="modal-footer-btns">
+                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalPM()">Batal</button>
+                <button type="button" class="btn-action btn-done" id="btn-submit-modal-pm" style="padding:10px 16px;" onclick="submitKonfirmasiPM()">✔️ Simpan & Tandai Selesai</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function setupPWA() {
             function createPngIcon(size) {
@@ -623,8 +654,8 @@
             <p id="login-brand-subtitle">MANAJEMEN PERBAIKAN</p>
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label>Nama Depan / Belakang / Lengkap</label>
-                    <input type="text" id="username" placeholder="" required autocomplete="off">
+                    <label>Nama Depan / Nama Karyawan</label>
+                    <input type="text" id="username" placeholder="Masukkan Nama Depan..." required autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label>PIN Keamanan</label>
@@ -675,6 +706,10 @@
                 <button class="tab-btn" id="btn-tab-perintah" onclick="switchTab(event, 'tab-perintah')">
                     <span class="tab-btn-left"><i class="fa-solid fa-bell"></i> <span id="nav-lbl-perintah">PERINTAH PEKERJAAN</span></span>
                     <span id="badge-notif-count" class="badge-blink" style="display:none;">0</span>
+                </button>
+                <button class="tab-btn" id="btn-tab-preventive" onclick="switchTab(event, 'tab-preventive')">
+                    <span class="tab-btn-left"><i class="fa-solid fa-calendar-check"></i> <span id="nav-lbl-preventive">PREVENTIVE MAINTENANCE</span></span>
+                    <span id="badge-pm-pending" class="badge-blink" style="display:none;">0</span>
                 </button>
                 <button class="tab-btn" id="btn-tab-histori" onclick="switchTab(event, 'tab-histori')">
                     <span class="tab-btn-left"><i class="fa-solid fa-clock-rotate-left"></i> <span id="nav-lbl-histori">HISTORI & DOWNTIME</span></span>
@@ -876,11 +911,29 @@
                             <label>Detail Perintah Pekerjaan</label>
                             <textarea id="cmd-keterangan" rows="2" placeholder="Tuliskan instruksi pekerjaan yang harus segera dilakukan personel..."></textarea>
                         </div>
-                        <button type="button" class="btn-primary" id="btn-kirim-cmd" onclick="kirimPerintahKerja()">📢 KIRIM PERINTAH PEKERJAAN</button>
+                        <input type="hidden" id="edit-cmd-id" value="">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <button type="button" class="btn-primary" id="btn-kirim-cmd" onclick="kirimPerintahKerja()" style="width:auto; padding:11px 22px;">📢 KIRIM PERINTAH PEKERJAAN</button>
+                            <button type="button" class="btn-action" id="btn-cancel-cmd" onclick="cancelEditPerintah()" style="display:none; background:#6c757d; color:white; padding:11px 16px;">Batal Edit</button>
+                        </div>
                     </div>
 
                     <div id="perintah-info-notice" style="background:#fff3cd; color:#856404; padding:10px; border-radius:6px; margin-bottom:15px; font-size:12px; font-weight:bold;">
                         ⚠️ Pemberitahuan yang berkedip merah menandakan pekerjaan BELUM DIKERJAKAN. Klik baris/tombol <b>"✔️ Dikerjakan & Isi Keterangan"</b> untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.
+                    </div>
+
+                    <!-- FILTER PENCARIAN PERINTAH PEKERJAAN (MESIN, TANGGAL & KATA KUNCI) -->
+                    <div class="filter-section">
+                        <label>⚙️ Unit Mesin:</label>
+                        <select id="cmd-filter-mesin" onchange="renderPerintahTable()">
+                            <option value="ALL">Semua Mesin</option>
+                        </select>
+
+                        <label>📅 Tanggal:</label>
+                        <input type="date" id="cmd-filter-tanggal" onchange="renderPerintahTable()" style="width:145px;">
+                        <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:6px 10px;" onclick="resetFilterPerintah()">Reset Filter</button>
+
+                        <input type="text" id="search-perintah" placeholder="🔍 Cari personel, equipment, issue, perintah..." onkeyup="renderPerintahTable()" style="flex:1; min-width:200px;">
                     </div>
 
                     <div class="table-responsive">
@@ -897,6 +950,141 @@
                             </thead>
                             <tbody id="perintah-table-body">
                                 <tr><td colspan="6" style="text-align:center;">Memuat daftar perintah pekerjaan...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB BARU: PREVENTIVE MAINTENANCE (GANJIL / GENAP AUTO-RESET BULANAN) -->
+                <div id="tab-preventive" class="card tab-pane">
+                    <h3>
+                        <span id="card-pm-title">🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)</span>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-export" onclick="exportPMExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                            <button class="btn-pdf" onclick="cetakPDFPM()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                        </div>
+                    </h3>
+
+                    <!-- INFO PERIODE AKTIF OTOMATIS -->
+                    <div style="background: linear-gradient(135deg, #003399, #0052cc); color: white; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <div style="font-size:12px; opacity:0.9;">📅 Periode Aktif Saat Ini:</div>
+                            <div id="pm-active-period-banner" style="font-size:16px; font-weight:bold; margin-top:2px;">Memuat Periode...</div>
+                            <div style="font-size:11px; color:#ffd54f; margin-top:3px;">♻️ Daftar master pekerjaan cukup diinput 1x — status otomatis reset setiap pergantian bulan!</div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <select id="pm-filter-bulan" onchange="renderPreventiveTable()" style="padding:7px 10px; border-radius:6px; border:none; font-weight:bold; font-size:12px;">
+                                <option value="01">Januari (Ganjil)</option>
+                                <option value="02">Februari (Genap)</option>
+                                <option value="03">Maret (Ganjil)</option>
+                                <option value="04">April (Genap)</option>
+                                <option value="05">Mei (Ganjil)</option>
+                                <option value="06">Juni (Genap)</option>
+                                <option value="07">Juli (Ganjil)</option>
+                                <option value="08">Agustus (Genap)</option>
+                                <option value="09">September (Ganjil)</option>
+                                <option value="10">Oktober (Genap)</option>
+                                <option value="11">November (Ganjil)</option>
+                                <option value="12">Desember (Genap)</option>
+                            </select>
+                            <select id="pm-filter-tahun" onchange="renderPreventiveTable()" style="padding:7px 10px; border-radius:6px; border:none; font-weight:bold; font-size:12px;">
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- STATISTIK RINGKAS PM BULAN INI -->
+                    <div class="downtime-summary" style="margin-bottom: 16px;">
+                        <div class="summary-card">
+                            <h4>Total Item PM Bulan Ini</h4>
+                            <p id="pm-stat-total">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#28a745;">
+                            <h4>Sudah Selesai (Done)</h4>
+                            <p id="pm-stat-done" style="color:#28a745;">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#dc3545;">
+                            <h4>Belum Dikerjakan</h4>
+                            <p id="pm-stat-pending" style="color:#dc3545;">0 Item</p>
+                        </div>
+                        <div class="summary-card" style="border-left-color:#ffc107;">
+                            <h4>Progres Bulan Ini</h4>
+                            <p id="pm-stat-percent" style="color:#b45309;">0%</p>
+                        </div>
+                    </div>
+
+                    <!-- FORM TAMBAH / EDIT PEKERJAAN PM (1X INPUT UNTUK SETERUSNYA + BISA TAMBAH KAPAN SAJA) -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 18px; border: 1px solid #ced4da;">
+                        <h4 id="form-pm-title" style="font-size:13px; color:var(--primary-color); margin-bottom:10px;">➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)</h4>
+                        <input type="hidden" id="edit-pm-id" value="">
+                        <div class="grid-3">
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:12px;">Unit Mesin <span style="color:red;">*</span></label>
+                                <select id="pm-mesin" style="font-weight:bold;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:12px;">Siklus Jadwal Bulan <span style="color:red;">*</span></label>
+                                <select id="pm-siklus" style="font-weight:bold;">
+                                    <option value="GANJIL">🔴 BULAN GANJIL (Jan, Mar, Mei, Jul, Sep, Nov)</option>
+                                    <option value="GENAP">🔵 BULAN GENAP (Feb, Apr, Jun, Agu, Okt, Des)</option>
+                                    <option value="SETIAP_BULAN">🟢 SETIAP BULAN (Ganjil & Genap)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:12px;">Equipment / Bagian Mesin <span style="color:red;">*</span></label>
+                                <input type="text" id="pm-equipment" placeholder="Misal: Hydraulic Pump, Gearbox, Bearing...">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:12px;">Item Pekerjaan / Checklist PM <span style="color:red;">*</span></label>
+                                <input type="text" id="pm-pekerjaan" placeholder="Misal: Ganti oli hidrolik, Greasing bearing, Cek kekencangan baut...">
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:12px;">Standar / Target Pemeriksaan (Opsional)</label>
+                                <input type="text" id="pm-standar" placeholder="Misal: Level oli full, Tidak ada kebocoran, Suhu < 60°C...">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                            <button type="button" class="btn-primary" id="btn-save-pm" onclick="simpanItemPM()" style="width:auto; padding:10px 20px;">💾 SIMPAN ITEM PREVENTIVE</button>
+                            <button type="button" class="btn-action" id="btn-cancel-pm" onclick="cancelEditPM()" style="display:none; background:#6c757d; color:white; padding:10px 16px;">Batal Edit</button>
+                        </div>
+                    </div>
+
+                    <!-- FILTER TAMPILAN TABEL PM -->
+                    <div class="filter-section">
+                        <label>Filter Siklus:</label>
+                        <select id="pm-filter-siklus" onchange="renderPreventiveTable()">
+                            <option value="AKTIF">📌 Jadwal Aktif Bulan Terpilih (Otomatis)</option>
+                            <option value="ALL">📋 Semua Master Jadwal (Ganjil + Genap)</option>
+                            <option value="GANJIL">🔴 Hanya Bulan Ganjil</option>
+                            <option value="GENAP">🔵 Hanya Bulan Genap</option>
+                            <option value="SETIAP_BULAN">🟢 Hanya Setiap Bulan</option>
+                        </select>
+                        <label>Unit Mesin:</label>
+                        <select id="pm-filter-mesin" onchange="renderPreventiveTable()">
+                            <option value="ALL">Semua Mesin</option>
+                        </select>
+                        <input type="text" id="search-pm" placeholder="🔍 Cari mesin, equipment, item pekerjaan PM..." onkeyup="renderPreventiveTable()" style="flex:1; min-width:200px;">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:45px;">No</th>
+                                    <th>Unit Mesin</th>
+                                    <th>Siklus Bulan</th>
+                                    <th>Equipment</th>
+                                    <th>Item Pekerjaan PM & Standar</th>
+                                    <th>Status Bulan Ini</th>
+                                    <th>Pelaksana & Keterangan</th>
+                                    <th>Aksi / Checklist</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pm-table-body">
+                                <tr><td colspan="8" style="text-align:center;">Memuat jadwal Preventive Maintenance...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1376,8 +1564,8 @@
 
                         <div id="settings-form-container">
 
-                            <h4 style="color: var(--primary-color); margin-bottom: 12px; font-size: 14px;">🛠️ 1. Kelola Master Daftar Mesin, Satuan & Jenis Laporan (Khusus Master Admin)</h4>
-                            <div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 25px; gap: 15px;">
+                            <h4 style="color: var(--primary-color); margin-bottom: 12px; font-size: 14px;">🛠️ 1. Kelola Master Daftar Mesin & Satuan (Khusus Master Admin)</h4>
+                            <div class="grid-2" style="margin-bottom: 25px;">
                                 <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #ddd;">
                                     <label style="font-weight:bold; font-size:13px;">Daftar Unit Mesin Operasional</label>
                                     <div id="list-mesin-tags" style="margin-top:10px; margin-bottom:10px;"></div>
@@ -1392,14 +1580,6 @@
                                     <div style="display:flex; gap:8px;">
                                         <input type="text" id="input-new-satuan" placeholder="Satuan Baru..." style="padding:8px; font-size:13px;">
                                         <button type="button" class="btn-primary" onclick="tambahSatuanMaster()" style="width:auto; padding:8px 14px; font-size:13px;">➕ Tambah</button>
-                                    </div>
-                                </div>
-                                <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #ddd;">
-                                    <label style="font-weight:bold; font-size:13px;">Daftar Jenis Laporan / Pekerjaan</label>
-                                    <div id="list-jenis-tags" style="margin-top:10px; margin-bottom:10px;"></div>
-                                    <div style="display:flex; gap:8px;">
-                                        <input type="text" id="input-new-jenis" placeholder="Jenis Laporan Baru..." style="padding:8px; font-size:13px;">
-                                        <button type="button" class="btn-primary" onclick="tambahJenisMaster()" style="width:auto; padding:8px 14px; font-size:13px;">➕ Tambah</button>
                                     </div>
                                 </div>
                             </div>
@@ -1422,6 +1602,7 @@
                             <div class="grid-2">
                                 <div class="form-group"><label>Menu 1: Laporan Harian</label><input type="text" id="setting-menu-laporan"></div>
                                 <div class="form-group"><label>Menu 2: Perintah Pekerjaan</label><input type="text" id="setting-menu-perintah"></div>
+                                <div class="form-group"><label>Menu 2B: Preventive Maintenance</label><input type="text" id="setting-menu-preventive"></div>
                                 <div class="form-group"><label>Menu 3: Histori & Downtime</label><input type="text" id="setting-menu-histori"></div>
                                 <div class="form-group"><label>Menu 4: Laporan Spare Part</label><input type="text" id="setting-menu-lap-part"></div>
                                 <div class="form-group"><label>Menu 5: Laporan Downtime</label><input type="text" id="setting-menu-lap-downtime"></div>
@@ -1589,7 +1770,7 @@
         }
 
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwN2uSTz6slkTEEq8CzPwfLw10jt6tGc1OPFc7k9hFVR2O4O8HgK_mNJ2gDoQz-UKCdmg/exec"; 
-        const MASTER_EMERGENCY_PIN = atob("MTIzNA==");
+        const MASTER_EMERGENCY_PIN = "1234";
 
         const initialGudangSpareparts = [];
         const fallbackKaryawan = [];
@@ -1598,6 +1779,8 @@
         let cloudData = { 
             laporan: [], 
             perintahKerja: [],
+            preventiveMaster: [],
+            preventiveLogs: [],
             sparepart: [], 
             dataPP: [],
             karyawan: [], 
@@ -1610,6 +1793,7 @@
                 logoBase64: "",
                 menuLaporan: "LAPORAN HARIAN",
                 menuPerintah: "PERINTAH PEKERJAAN",
+                menuPreventive: "PREVENTIVE MAINTENANCE",
                 menuHistori: "HISTORI & DOWNTIME",
                 menuLapPart: "LAPORAN SPARE PART",
                 menuLapDowntime: "LAPORAN DOWNTIME",
@@ -1619,8 +1803,7 @@
                 menuKaryawan: "DATA KARYAWAN & PIN",
                 menuPengaturan: "PENGATURAN MASTER ADMIN",
                 masterMesin: ["MESIN-A", "MESIN-B", "MESIN-C", "UTILITY"],
-                masterSatuan: ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"],
-                masterJenisLaporan: ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"]
+                masterSatuan: ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"]
             } 
         };
         let activeTanggal = "";
@@ -1856,6 +2039,8 @@
             if(document.getElementById('pilih-tahun-part')) document.getElementById('pilih-tahun-part').value = currentYear;
             if(document.getElementById('pilih-bulan-downtime')) document.getElementById('pilih-bulan-downtime').value = currentMonth;
             if(document.getElementById('pilih-tahun-downtime')) document.getElementById('pilih-tahun-downtime').value = currentYear;
+            if(document.getElementById('pm-filter-bulan')) document.getElementById('pm-filter-bulan').value = currentMonth;
+            if(document.getElementById('pm-filter-tahun')) document.getElementById('pm-filter-tahun').value = currentYear;
 
             loadLocalAppData();
             applySettingsToUI();
@@ -1877,6 +2062,10 @@
                 if (storedPerintah) { cloudData.perintahKerja = JSON.parse(storedPerintah); }
                 let storedDataPP = localStorage.getItem('app_data_pp');
                 if (storedDataPP) { cloudData.dataPP = JSON.parse(storedDataPP); }
+                let storedPMMaster = localStorage.getItem('app_pm_master');
+                if (storedPMMaster) { cloudData.preventiveMaster = JSON.parse(storedPMMaster); }
+                let storedPMLogs = localStorage.getItem('app_pm_logs');
+                if (storedPMLogs) { cloudData.preventiveLogs = JSON.parse(storedPMLogs); }
                 let storedLaporan = localStorage.getItem('app_laporan_data');
                 if (storedLaporan && (!cloudData.laporan || cloudData.laporan.length === 0)) {
                     cloudData.laporan = JSON.parse(storedLaporan);
@@ -1887,16 +2076,11 @@
         function saveLocalAppData() {
             try {
                 localStorage.setItem('app_master_settings', JSON.stringify(cloudData.settings));
-                const sanitizedKaryawan = (cloudData.karyawan || []).map(k => ({
-                    nik: k.nik || "",
-                    nama: k.nama || "",
-                    hp: k.hp || "",
-                    jabatan: k.jabatan || "",
-                    hasPin: !!(k.pin && String(k.pin).trim() !== "")
-                }));
-                localStorage.setItem('app_karyawan_data', JSON.stringify(sanitizedKaryawan));
+                localStorage.setItem('app_karyawan_data', JSON.stringify(cloudData.karyawan || []));
                 localStorage.setItem('app_perintah_kerja', JSON.stringify(cloudData.perintahKerja || []));
                 localStorage.setItem('app_data_pp', JSON.stringify(cloudData.dataPP || []));
+                localStorage.setItem('app_pm_master', JSON.stringify(cloudData.preventiveMaster || []));
+                localStorage.setItem('app_pm_logs', JSON.stringify(cloudData.preventiveLogs || []));
                 localStorage.setItem('app_laporan_data', JSON.stringify(cloudData.laporan || []));
             } catch(e) {}
         }
@@ -1907,9 +2091,6 @@
             
             if(!s.masterMesin) s.masterMesin = ["MESIN-A", "MESIN-B", "MESIN-C", "UTILITY"];
             if(!s.masterSatuan) s.masterSatuan = ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"];
-            if(!s.masterJenisLaporan || !Array.isArray(s.masterJenisLaporan) || s.masterJenisLaporan.length === 0) {
-                s.masterJenisLaporan = ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
-            }
 
             const mainTitle = s.mainTitle || "PT.ALEXINDO PLANT 2";
             const yellowSubTitle = s.yellowSubTitle || "MANAJEMEN PERBAIKAN";
@@ -1925,6 +2106,7 @@
 
             document.getElementById('nav-lbl-laporan').innerText = s.menuLaporan || "LAPORAN HARIAN";
             document.getElementById('nav-lbl-perintah').innerText = s.menuPerintah || "PERINTAH PEKERJAAN";
+            if(document.getElementById('nav-lbl-preventive')) document.getElementById('nav-lbl-preventive').innerText = s.menuPreventive || "PREVENTIVE MAINTENANCE";
             document.getElementById('nav-lbl-histori').innerText = s.menuHistori || "HISTORI & DOWNTIME";
             document.getElementById('nav-lbl-lap-part').innerText = s.menuLapPart || "LAPORAN SPARE PART";
             document.getElementById('nav-lbl-lap-downtime').innerText = s.menuLapDowntime || "LAPORAN DOWNTIME";
@@ -1936,7 +2118,6 @@
 
             populateMesinDropdowns();
             populateSatuanDropdowns();
-            populateJenisDropdowns();
             populateCmdPersonelDropdown();
             renderMasterTags();
 
@@ -1976,6 +2157,7 @@
 
                 document.getElementById('setting-menu-laporan').value = s.menuLaporan || "LAPORAN HARIAN";
                 document.getElementById('setting-menu-perintah').value = s.menuPerintah || "PERINTAH PEKERJAAN";
+                if(document.getElementById('setting-menu-preventive')) document.getElementById('setting-menu-preventive').value = s.menuPreventive || "PREVENTIVE MAINTENANCE";
                 document.getElementById('setting-menu-histori').value = s.menuHistori || "HISTORI & DOWNTIME";
                 document.getElementById('setting-menu-lap-part').value = s.menuLapPart || "LAPORAN SPARE PART";
                 document.getElementById('setting-menu-lap-downtime').value = s.menuLapDowntime || "LAPORAN DOWNTIME";
@@ -2017,7 +2199,7 @@
             const listMesin = cloudData.settings.masterMesin || ["MESIN-A", "MESIN-B", "MESIN-C", "UTILITY"];
             const optionsHtml = listMesin.map(m => `<option value="${m}">${m}</option>`).join('');
 
-            ['lap-mesin', 'cmd-mesin', 'pp-machine'].forEach(id => {
+            ['lap-mesin', 'cmd-mesin', 'pp-machine', 'pm-mesin'].forEach(id => {
                 const el = document.getElementById(id);
                 if(el) {
                     const cur = el.value;
@@ -2025,12 +2207,14 @@
                     if(listMesin.includes(cur)) el.value = cur;
                 }
             });
-            const elFilterMesin = document.getElementById('filter-mesin-histori');
-            if(elFilterMesin) {
-                const curFilter = elFilterMesin.value || 'ALL';
-                elFilterMesin.innerHTML = `<option value="ALL">Semua Mesin</option>` + optionsHtml;
-                if(curFilter === 'ALL' || listMesin.includes(curFilter)) elFilterMesin.value = curFilter;
-            }
+            ['filter-mesin-histori', 'pm-filter-mesin', 'cmd-filter-mesin'].forEach(fid => {
+                const elFilterMesin = document.getElementById(fid);
+                if(elFilterMesin) {
+                    const curFilter = elFilterMesin.value || 'ALL';
+                    elFilterMesin.innerHTML = `<option value="ALL">Semua Mesin</option>` + optionsHtml;
+                    if(curFilter === 'ALL' || listMesin.includes(curFilter)) elFilterMesin.value = curFilter;
+                }
+            });
         }
 
         function populateCmdPersonelDropdown() {
@@ -2050,38 +2234,6 @@
             }
         }
 
-        function getJenisIcon(label) {
-            const low = String(label || '').toLowerCase();
-            if (low.includes('cek') || low.includes('kontrol') || low.includes('inspeksi')) return '🔍';
-            if (low.includes('rutin') || low.includes('preventive') || low.includes('pm')) return '🔄';
-            return '🛠️';
-        }
-
-        function populateJenisDropdowns() {
-            const listJenis = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
-            const elLap = document.getElementById('lap-jenis-kegiatan');
-            if (elLap) {
-                const cur = elLap.value;
-                elLap.innerHTML = listJenis.map(j => `<option value="${escapeHtml(j)}">${getJenisIcon(j)} ${escapeHtml(j)}</option>`).join('');
-                if (cur) {
-                    const found = Array.from(elLap.options).find(o => o.value.toLowerCase() === cur.toLowerCase());
-                    if (found) elLap.value = found.value;
-                }
-            }
-            const elFilter = document.getElementById('filter-jenis-laporan');
-            if (elFilter) {
-                const curF = elFilter.value || 'ALL';
-                const allText = (typeof currentLang !== 'undefined' && currentLang === 'en') ? 'All Types' : 'Semua Jenis';
-                elFilter.innerHTML = `<option value="ALL">${allText}</option>` + listJenis.map(j => `<option value="${escapeHtml(j)}">${getJenisIcon(j)} ${escapeHtml(j)}</option>`).join('');
-                if (curF === 'ALL') {
-                    elFilter.value = 'ALL';
-                } else {
-                    const foundF = Array.from(elFilter.options).find(o => o.value.toLowerCase() === curF.toLowerCase());
-                    if (foundF) elFilter.value = foundF.value;
-                }
-            }
-        }
-
         function populateSatuanDropdowns() {
             const listSatuan = cloudData.settings.masterSatuan || ["Pcs", "Batang", "Meter", "CM", "MM", "Drum", "Liter", "Set", "Unit", "Lembar"];
             ['lap-satuan', 'part-satuan', 'pp-satuan'].forEach(id => {
@@ -2098,72 +2250,19 @@
             const isMaster = isUserMasterAdmin();
             const listMesin = cloudData.settings.masterMesin || [];
             const listSatuan = cloudData.settings.masterSatuan || [];
-            const listJenis = cloudData.settings.masterJenisLaporan || [];
 
             const containerMesin = document.getElementById('list-mesin-tags');
             const containerSatuan = document.getElementById('list-satuan-tags');
-            const containerJenis = document.getElementById('list-jenis-tags');
 
             if(containerMesin) {
                 containerMesin.innerHTML = listMesin.map((m, idx) => `
-                    <span class="tag-badge">⚙️ ${escapeHtml(m)} ${isMaster ? `<button type="button" class="btn-remove-tag" onclick="hapusMesinMaster(${idx})">&times;</button>` : ''}</span>
+                    <span class="tag-badge">⚙️ ${m} ${isMaster ? `<button class="btn-remove-tag" onclick="hapusMesinMaster(${idx})">&times;</button>` : ''}</span>
                 `).join('');
             }
             if(containerSatuan) {
                 containerSatuan.innerHTML = listSatuan.map((s, idx) => `
-                    <span class="tag-badge">📏 ${escapeHtml(s)} ${isMaster ? `<button type="button" class="btn-remove-tag" onclick="hapusSatuanMaster(${idx})">&times;</button>` : ''}</span>
+                    <span class="tag-badge">📏 ${s} ${isMaster ? `<button class="btn-remove-tag" onclick="hapusSatuanMaster(${idx})">&times;</button>` : ''}</span>
                 `).join('');
-            }
-            if(containerJenis) {
-                containerJenis.innerHTML = listJenis.map((j, idx) => `
-                    <span class="tag-badge">${getJenisIcon(j)} ${escapeHtml(j)} ${isMaster ? `<button type="button" style="cursor:pointer; color:#003399; border:none; background:transparent; font-size:12px; margin-left:4px;" title="Edit Nama Jenis" onclick="editJenisMaster(${idx})"><i class="fa-solid fa-pen"></i></button><button type="button" class="btn-remove-tag" title="Hapus" onclick="hapusJenisMaster(${idx})">&times;</button>` : ''}</span>
-                `).join('');
-            }
-        }
-
-        function tambahJenisMaster() {
-            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
-            const input = document.getElementById('input-new-jenis');
-            const val = input.value.trim();
-            if(!val) return;
-
-            if(!cloudData.settings.masterJenisLaporan) cloudData.settings.masterJenisLaporan = [];
-            const exists = cloudData.settings.masterJenisLaporan.some(x => x.toLowerCase() === val.toLowerCase());
-            if(!exists) {
-                cloudData.settings.masterJenisLaporan.push(val);
-                input.value = "";
-                saveLocalAppData();
-                applySettingsToUI();
-                sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
-            } else {
-                alert("Jenis laporan tersebut sudah ada dalam daftar!");
-            }
-        }
-
-        function editJenisMaster(index) {
-            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
-            const listJenis = cloudData.settings.masterJenisLaporan || [];
-            const oldVal = listJenis[index];
-            if(!oldVal) return;
-            const newVal = prompt("Edit nama Jenis Laporan / Pekerjaan:", oldVal);
-            if(newVal === null) return;
-            const trimmed = newVal.trim();
-            if(!trimmed) { alert("Nama jenis laporan tidak boleh kosong!"); return; }
-            cloudData.settings.masterJenisLaporan[index] = trimmed;
-            saveLocalAppData();
-            applySettingsToUI();
-            sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
-        }
-
-        function hapusJenisMaster(index) {
-            if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
-            const listJenis = cloudData.settings.masterJenisLaporan || [];
-            if(listJenis.length <= 1) { alert("Minimal harus tersisa 1 jenis laporan!"); return; }
-            if(confirm(`Hapus jenis laporan "${listJenis[index]}" dari master pilihan?`)) {
-                cloudData.settings.masterJenisLaporan.splice(index, 1);
-                saveLocalAppData();
-                applySettingsToUI();
-                sendDataToSheets({ action: 'settings', type: 'save', settings: cloudData.settings }).catch(e => {});
             }
         }
 
@@ -2323,7 +2422,7 @@
             const ids = [
                 'setting-main-title', 'setting-yellow-sub-title', 'setting-sub-title', 'setting-logo-file',
                 'setting-lock-karyawan', 'setting-master-names',
-                'setting-menu-laporan', 'setting-menu-perintah', 'setting-menu-histori', 'setting-menu-lap-part',
+                'setting-menu-laporan', 'setting-menu-perintah', 'setting-menu-preventive', 'setting-menu-histori', 'setting-menu-lap-part',
                 'setting-menu-lap-downtime', 'setting-menu-sparepart', 'setting-menu-datapp', 'setting-menu-grafik',
                 'setting-menu-karyawan', 'setting-menu-pengaturan',
                 'setting-login-bg-file'
@@ -2383,6 +2482,7 @@
 
             cloudData.settings.menuLaporan = document.getElementById('setting-menu-laporan').value.trim() || "LAPORAN HARIAN";
             cloudData.settings.menuPerintah = document.getElementById('setting-menu-perintah').value.trim() || "PERINTAH PEKERJAAN";
+            if(document.getElementById('setting-menu-preventive')) cloudData.settings.menuPreventive = document.getElementById('setting-menu-preventive').value.trim() || "PREVENTIVE MAINTENANCE";
             cloudData.settings.menuHistori = document.getElementById('setting-menu-histori').value.trim() || "HISTORI & DOWNTIME";
             cloudData.settings.menuLapPart = document.getElementById('setting-menu-lap-part').value.trim() || "LAPORAN SPARE PART";
             cloudData.settings.menuLapDowntime = document.getElementById('setting-menu-lap-downtime').value.trim() || "LAPORAN DOWNTIME";
@@ -2425,67 +2525,12 @@
             document.getElementById('sidebar-overlay').classList.remove('show');
         }
 
-        /* SISTEM LOGIN & PROTEKSI KEAMANAN KETAT */
-        let failedLoginCount = 0;
-        let loginLockUntil = 0;
-
-        // Proteksi anti-inspeksi kode sumber (blokir klik kanan & shortcut DevTools bagi non-admin)
-        document.addEventListener('contextmenu', function(e) {
-            if (!isUserMasterAdmin()) e.preventDefault();
-        });
-        document.addEventListener('keydown', function(e) {
-            if (isUserMasterAdmin()) return;
-            const key = e.key ? e.key.toUpperCase() : '';
-            if (
-                e.key === 'F12' ||
-                (e.ctrlKey && e.shiftKey && (key === 'I' || key === 'J' || key === 'C')) ||
-                (e.ctrlKey && (key === 'U' || key === 'S'))
-            ) {
-                e.preventDefault();
-            }
-        });
-
-        function isExactNameMatch(inputRaw, dbRaw) {
-            const cleanWord = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const inputParts = String(inputRaw || '').trim().split(/\s+/).map(cleanWord).filter(Boolean);
-            const dbParts = String(dbRaw || '').trim().split(/\s+/).map(cleanWord).filter(Boolean);
-
-            if (inputParts.length === 0 || dbParts.length === 0) return false;
-
-            const inputJoined = inputParts.join('');
-            const dbJoined = dbParts.join('');
-
-            // 1. Nama lengkap persis sama (misal: "Deden Sutandi" === "Deden Sutandi")
-            if (inputJoined === dbJoined) return true;
-
-            // 2. Satu kata input harus persis sama dengan Nama Depan ATAU Nama Belakang (bukan sebagian huruf)
-            if (inputParts.length === 1) {
-                const single = inputParts[0];
-                const firstName = dbParts[0];
-                const lastName = dbParts[dbParts.length - 1];
-                return single === firstName || single === lastName;
-            }
-
-            // 3. Jika 2+ kata, cek kombinasi Nama Depan + Nama Belakang persis
-            if (inputParts.length === 2 && dbParts.length >= 2) {
-                return inputParts[0] === dbParts[0] && inputParts[1] === dbParts[dbParts.length - 1];
-            }
-
-            return false;
-        }
-
+        /* SISTEM LOGIN */
         async function handleLogin(event) {
             event.preventDefault();
-
-            const now = Date.now();
-            if (now < loginLockUntil) {
-                const sisaDetik = Math.ceil((loginLockUntil - now) / 1000);
-                alert(`🔒 Terlalu banyak percobaan login gagal! Tunggu ${sisaDetik} detik lagi.`);
-                return;
-            }
-
             let rawName = document.getElementById('username').value.trim();
             let passInput = document.getElementById('password').value.trim();
+            let normInputName = normalizeString(rawName);
 
             if (!rawName || !passInput) { alert("Nama Pengguna dan PIN Keamanan wajib diisi!"); return; }
 
@@ -2505,16 +2550,23 @@
                 let karyawanList = (cloudData.karyawan && cloudData.karyawan.length > 0) ? cloudData.karyawan : [];
 
                 const findUserMatch = (list) => {
-                    return list.find(k => {
-                        let nameMatches = isExactNameMatch(rawName, k.nama);
-                        let pinMatches = (k.pin !== undefined && k.pin !== null && String(k.pin).trim() !== "" && String(k.pin).trim() === passInput);
+                    let user = list.find(k => {
+                        let dbNamaFull = normalizeString(k.nama);
+                        let dbNamaDepan = dbNamaFull.split(' ')[0];
+                        let nameMatches = (dbNamaFull === normInputName || dbNamaDepan === normInputName || dbNamaFull.startsWith(normInputName) || normInputName.startsWith(dbNamaDepan));
+                        let pinMatches = (k.pin !== undefined && k.pin !== null && String(k.pin).trim() === passInput);
                         return nameMatches && pinMatches;
                     });
+                    if (!user) {
+                        let pinOnly = list.find(k => k.pin !== undefined && k.pin !== null && String(k.pin).trim() === passInput);
+                        if (pinOnly) return { nama: rawName };
+                    }
+                    return user;
                 };
 
                 let matchedUser = findUserMatch(karyawanList);
 
-                // Jika belum cocok di cache lokal, paksa tarik ulang dari Google Sheets
+                // Jika belum cocok di cache lokal (misal habis update koding/PIN berubah), paksa tarik ulang dari Google Sheets
                 if (!matchedUser) {
                     await fetchDataFromSheets(true);
                     karyawanList = (cloudData.karyawan && cloudData.karyawan.length > 0) ? cloudData.karyawan : [];
@@ -2523,39 +2575,21 @@
 
                 if (karyawanList.length === 0) {
                     if (passInput === MASTER_EMERGENCY_PIN) {
-                        const s = cloudData.settings || {};
-                        const masterArr = (s.masterNames || "Akim, Deden").split(',').map(n => n.trim()).filter(Boolean);
-                        const isMasterMatch = masterArr.some(m => isExactNameMatch(rawName, m));
-                        if (!isMasterMatch) {
-                            failedLoginCount++;
-                            alert("Akses Ditolak! Nama tidak sesuai dengan daftar Master Admin awal.");
-                            return;
-                        }
-                        failedLoginCount = 0;
-                        alert(`Selamat datang! Anda masuk menggunakan Master PIN Default.`);
+                        alert(`Selamat datang! Anda masuk menggunakan Master PIN Default (${MASTER_EMERGENCY_PIN}).`);
                         currentUser = rawName;
                         grantAccess();
                         return;
                     } else {
-                        failedLoginCount++;
-                        alert("Akses Ditolak! Gunakan Nama Master Admin & PIN awal yang benar.");
+                        alert("Akses Ditolak! Gunakan Master PIN '1234' untuk login awal.");
                         return;
                     }
                 }
 
                 if (!matchedUser) {
-                    failedLoginCount++;
-                    if (failedLoginCount >= 5) {
-                        loginLockUntil = Date.now() + 60000;
-                        failedLoginCount = 0;
-                        alert("🔒 Akses Diblokir Sementara (60 Detik) karena 5x gagal verifikasi Nama & PIN!");
-                    } else {
-                        alert(`❌ Akses Ditolak! Penulisan Nama (Nama Depan / Belakang / Lengkap) atau PIN tidak sesuai. (Percobaan ${failedLoginCount}/5)`);
-                    }
+                    alert("PIN Keamanan SALAH atau Nama Pengguna tidak terdaftar!");
                     return;
                 }
 
-                failedLoginCount = 0;
                 currentUser = matchedUser.nama;
                 grantAccess();
             } finally {
@@ -2597,9 +2631,12 @@
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
                 const isModalOpen = document.getElementById('modal-konfirmasi-perintah')?.style.display === 'flex' ||
+                                    document.getElementById('modal-konfirmasi-pm')?.style.display === 'flex' ||
                                     document.getElementById('modal-install-app')?.style.display === 'flex';
                 const isEditing = (document.getElementById('edit-id')?.value !== "") ||
                                   (document.getElementById('edit-pp-id')?.value !== "") ||
+                                  (document.getElementById('edit-pm-id')?.value !== "") ||
+                                  (document.getElementById('edit-cmd-id')?.value !== "") ||
                                   (document.getElementById('edit-part-id')?.value !== "") ||
                                   (document.getElementById('edit-karyawan-index')?.value !== "");
                 if(!isTyping && !isModalOpen && !isEditing && !isSavingData) {
@@ -2639,7 +2676,7 @@
             closeMobileSidebar();
 
             const scrollControls = document.getElementById('scroll-controls');
-            const scrollableTabs = ['tab-histori', 'tab-laporan-part', 'tab-sparepart', 'tab-laporan-downtime', 'tab-perintah', 'tab-datapp'];
+            const scrollableTabs = ['tab-histori', 'tab-laporan-part', 'tab-sparepart', 'tab-laporan-downtime', 'tab-perintah', 'tab-preventive', 'tab-datapp'];
             if(scrollControls) scrollControls.style.display = scrollableTabs.includes(id) ? 'flex' : 'none';
 
             if(id === 'tab-karyawan') renderKaryawanTable();
@@ -2653,10 +2690,14 @@
                 populateCmdPersonelDropdown();
                 renderPerintahTable();
             }
+            else if(id === 'tab-preventive') {
+                renderPreventiveTable();
+            }
         }
 
         function renderAllViews() {
             renderPerintahTable();
+            renderPreventiveTable();
             renderHistoriTable();
             renderLaporanPartTable();
             renderLaporanDowntimeTable();
@@ -2709,6 +2750,8 @@
                         }
                         if(incomingData.karyawan) cloudData.karyawan = incomingData.karyawan;
                         if(incomingData.perintahKerja) cloudData.perintahKerja = incomingData.perintahKerja;
+                        if(incomingData.preventiveMaster) cloudData.preventiveMaster = incomingData.preventiveMaster;
+                        if(incomingData.preventiveLogs) cloudData.preventiveLogs = incomingData.preventiveLogs;
                         if(incomingData.settings) cloudData.settings = incomingData.settings;
                         saveLocalAppData();
                         applySettingsToUI();
@@ -3095,6 +3138,7 @@
             if(!isUserMasterAdmin()) { alert("Akses Ditolak! Hanya Master Admin."); return; }
 
             const btn = document.getElementById('btn-kirim-cmd');
+            const editId = document.getElementById('edit-cmd-id') ? document.getElementById('edit-cmd-id').value : "";
             const personel = document.getElementById('cmd-personel').value;
             const mesin = document.getElementById('cmd-mesin').value;
             const equipment = document.getElementById('cmd-equipment').value.trim();
@@ -3106,8 +3150,45 @@
                 return;
             }
 
-            btn.innerText = "MENGIRIM PERINTAH...";
+            btn.innerText = editId ? "MEMPERBARUI PERINTAH..." : "MENGIRIM PERINTAH...";
             btn.disabled = true;
+
+            if(!cloudData.perintahKerja) cloudData.perintahKerja = [];
+
+            if(editId) {
+                const idx = cloudData.perintahKerja.findIndex(c => String(c.id) === String(editId));
+                const existingCmd = idx !== -1 ? cloudData.perintahKerja[idx] : {};
+                const updatedCmd = {
+                    ...existingCmd,
+                    id: existingCmd.id || (parseInt(editId, 10) || editId),
+                    tanggal: existingCmd.tanggal || getWIBDateTimeString(),
+                    masterAdmin: existingCmd.masterAdmin || currentUser,
+                    personel: personel,
+                    mesin: mesin,
+                    equipment: equipment,
+                    issue: issue,
+                    perintah: perintah,
+                    updatedAt: getWIBDateTimeString()
+                };
+                if(idx !== -1) cloudData.perintahKerja[idx] = updatedCmd;
+                else cloudData.perintahKerja.unshift(updatedCmd);
+
+                saveLocalAppData();
+                renderPerintahTable();
+
+                try {
+                    await sendDataToSheets({ action: 'perintah', type: 'update', row: updatedCmd }).catch(() => {});
+                    alert(`✅ Perintah pekerjaan berhasil diperbarui!`);
+                    cancelEditPerintah();
+                    fetchDataFromSheets(true);
+                } catch (err) {
+                    alert("Tersimpan lokal, gagal kirim ke server: " + err);
+                } finally {
+                    btn.innerText = "📢 KIRIM PERINTAH PEKERJAAN";
+                    btn.disabled = false;
+                }
+                return;
+            }
 
             const newCmd = {
                 id: Date.now(),
@@ -3123,7 +3204,6 @@
                 keteranganPersonel: ""
             };
 
-            if(!cloudData.perintahKerja) cloudData.perintahKerja = [];
             cloudData.perintahKerja.unshift(newCmd);
             saveLocalAppData();
             renderPerintahTable();
@@ -3134,13 +3214,49 @@
                 document.getElementById('cmd-equipment').value = "";
                 document.getElementById('cmd-issue').value = "";
                 document.getElementById('cmd-keterangan').value = "";
-                fetchDataFromSheets();
+                fetchDataFromSheets(true);
             } catch (err) {
                 alert("Tersimpan lokal, gagal kirim ke server: " + err);
             } finally {
                 btn.innerText = "📢 KIRIM PERINTAH PEKERJAAN";
                 btn.disabled = false;
             }
+        }
+
+        function editPerintahKerja(id) {
+            if(!isUserMasterAdmin()) { alert("Akses Ditolak! Hanya Master Admin."); return; }
+            const cmd = (cloudData.perintahKerja || []).find(c => String(c.id) === String(id));
+            if(!cmd) return;
+
+            document.getElementById('edit-cmd-id').value = cmd.id;
+            if(cmd.personel) document.getElementById('cmd-personel').value = cmd.personel;
+            if(cmd.mesin) document.getElementById('cmd-mesin').value = cmd.mesin;
+            document.getElementById('cmd-equipment').value = cmd.equipment || "";
+            document.getElementById('cmd-issue').value = cmd.issue || "";
+            document.getElementById('cmd-keterangan').value = cmd.perintah || "";
+
+            document.getElementById('btn-kirim-cmd').innerText = "💾 SIMPAN PERUBAHAN PERINTAH";
+            const btnCancel = document.getElementById('btn-cancel-cmd');
+            if(btnCancel) btnCancel.style.display = "inline-block";
+            scrollToTop();
+        }
+
+        function cancelEditPerintah() {
+            const editEl = document.getElementById('edit-cmd-id');
+            if(editEl) editEl.value = "";
+            document.getElementById('cmd-equipment').value = "";
+            document.getElementById('cmd-issue').value = "";
+            document.getElementById('cmd-keterangan').value = "";
+            document.getElementById('btn-kirim-cmd').innerText = "📢 KIRIM PERINTAH PEKERJAAN";
+            const btnCancel = document.getElementById('btn-cancel-cmd');
+            if(btnCancel) btnCancel.style.display = "none";
+        }
+
+        function resetFilterPerintah() {
+            if(document.getElementById('cmd-filter-mesin')) document.getElementById('cmd-filter-mesin').value = "ALL";
+            if(document.getElementById('cmd-filter-tanggal')) document.getElementById('cmd-filter-tanggal').value = "";
+            if(document.getElementById('search-perintah')) document.getElementById('search-perintah').value = "";
+            renderPerintahTable();
         }
 
         function bukaModalKonfirmasiPerintah(id) {
@@ -3247,10 +3363,28 @@
             const isMaster = isUserMasterAdmin();
             const currentNorm = normalizeString(currentUser);
 
+            const filterMesinCmd = document.getElementById('cmd-filter-mesin') ? document.getElementById('cmd-filter-mesin').value : 'ALL';
+            const filterTglCmd = document.getElementById('cmd-filter-tanggal') ? document.getElementById('cmd-filter-tanggal').value : '';
+            const searchCmd = (document.getElementById('search-perintah') ? document.getElementById('search-perintah').value : '').toLowerCase();
+
             let relevantList = listCmd.filter(c => {
-                if(isMaster) return true;
-                let targetNorm = normalizeString(c.personel);
-                return targetNorm === currentNorm || targetNorm === "semuapersonel" || targetNorm.includes(currentNorm) || currentNorm.includes(targetNorm);
+                if(!isMaster) {
+                    let targetNorm = normalizeString(c.personel);
+                    let matchUser = (targetNorm === currentNorm || targetNorm === "semuapersonel" || targetNorm.includes(currentNorm) || currentNorm.includes(targetNorm));
+                    if(!matchUser) return false;
+                }
+                if(filterMesinCmd !== 'ALL' && String(c.mesin || '').trim().toUpperCase() !== filterMesinCmd.toUpperCase()) {
+                    return false;
+                }
+                if(filterTglCmd) {
+                    let cmdYmd = normalizeDateToWIB_YMD(c.tanggal);
+                    if(cmdYmd !== filterTglCmd) return false;
+                }
+                if(searchCmd) {
+                    let combined = `${formatTanggalIndo(c.tanggal)} ${c.masterAdmin || ''} ${c.personel || ''} ${c.mesin || ''} ${c.equipment || ''} ${c.issue || ''} ${c.perintah || ''} ${c.status || ''} ${c.keteranganPersonel || ''}`.toLowerCase();
+                    if(!combined.includes(searchCmd)) return false;
+                }
+                return true;
             });
 
             let activeAlertList = relevantList.filter(c => c.status === "Belum Dikerjakan");
@@ -3299,6 +3433,7 @@
                 }
 
                 if(isMaster) {
+                    actionBtns += `<button class="btn-action btn-edit" onclick="event.stopPropagation(); editPerintahKerja('${c.id}')">Edit</button>`;
                     actionBtns += `<button class="btn-action btn-delete" onclick="event.stopPropagation(); hapusPerintahKerja('${c.id}')">Hapus</button>`;
                 }
 
@@ -3633,39 +3768,19 @@
             let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
             let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
             if(document.getElementById('lap-jenis-kegiatan')) {
-                const selJenis = document.getElementById('lap-jenis-kegiatan');
-                const listJenis = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
                 if(matchJenis) {
-                    let jRaw = matchJenis[1].trim();
-                    let foundOpt = Array.from(selJenis.options).find(o => o.value.toLowerCase() === jRaw.toLowerCase());
-                    if (!foundOpt) {
-                        if (jRaw.toUpperCase() === 'PEKERJAAN' || jRaw.toUpperCase() === 'PERBAIKAN') {
-                            foundOpt = Array.from(selJenis.options).find(o => /pekerjaan|perbaikan/i.test(o.value));
-                        } else if (jRaw.toUpperCase() === 'PENGECEKAN') {
-                            foundOpt = Array.from(selJenis.options).find(o => /pengecekan|kontrol/i.test(o.value));
-                        } else if (jRaw.toUpperCase() === 'RUTIN') {
-                            foundOpt = Array.from(selJenis.options).find(o => /rutin|preventive/i.test(o.value));
-                        }
-                    }
-                    if (foundOpt) {
-                        selJenis.value = foundOpt.value;
-                    } else {
-                        const tmpOpt = document.createElement('option');
-                        tmpOpt.value = jRaw;
-                        tmpOpt.textContent = `${getJenisIcon(jRaw)} ${jRaw}`;
-                        selJenis.appendChild(tmpOpt);
-                        selJenis.value = jRaw;
-                    }
+                    let jVal = matchJenis[1].trim().toUpperCase();
+                    if (jVal === 'PERBAIKAN') jVal = 'PEKERJAAN';
+                    document.getElementById('lap-jenis-kegiatan').value = jVal;
                 } else {
                     let lowKet = rawKet.toLowerCase();
-                    let targetOpt = null;
                     if (lowKet.includes('rutin') || lowKet.includes('preventive') || lowKet.includes('greasing') || lowKet.includes('cleaning')) {
-                        targetOpt = Array.from(selJenis.options).find(o => /rutin|preventive/i.test(o.value));
+                        document.getElementById('lap-jenis-kegiatan').value = 'RUTIN';
                     } else if (lowKet.includes('cek') || lowKet.includes('pengecekan') || lowKet.includes('kontrol') || lowKet.includes('monitoring') || lowKet.includes('inspeksi')) {
-                        targetOpt = Array.from(selJenis.options).find(o => /pengecekan|kontrol/i.test(o.value));
+                        document.getElementById('lap-jenis-kegiatan').value = 'PENGECEKAN';
+                    } else {
+                        document.getElementById('lap-jenis-kegiatan').value = 'PEKERJAAN';
                     }
-                    if (!targetOpt && selJenis.options.length > 0) targetOpt = selJenis.options[0];
-                    if (targetOpt) selJenis.value = targetOpt.value;
                 }
             }
             if(matchEquip) document.getElementById('lap-equipment').value = matchEquip[1];
@@ -3939,6 +4054,7 @@
             const jenisFilter = document.getElementById('filter-jenis-laporan') ? document.getElementById('filter-jenis-laporan').value : 'ALL';
 
             let filteredList = sortedLaporan.filter(item => {
+                if (String(item.ket || '').startsWith('[PM_MASTER_SYNC]')) return false;
                 if(mesinFilter !== 'ALL' && String(item.mesin || '').trim().toUpperCase() !== mesinFilter.toUpperCase()) return false;
 
                 let rawItemTgl = normalizeDateToWIB_YMD(item.tanggal);
@@ -3952,31 +4068,21 @@
 
                 let rawKetStr = String(item.ket || '');
                 let matchJenis = rawKetStr.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let listJenisMaster = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
-                let detectedJenis = listJenisMaster[0] || 'Pekerjaan / Perbaikan';
+                let detectedJenis = 'PEKERJAAN';
                 if (matchJenis) {
-                    let jRaw = matchJenis[1].trim();
-                    let jUp = jRaw.toUpperCase();
-                    if (jUp === 'PEKERJAAN' || jUp === 'PERBAIKAN') {
-                        detectedJenis = listJenisMaster.find(x => /pekerjaan|perbaikan/i.test(x)) || jRaw;
-                    } else if (jUp === 'PENGECEKAN') {
-                        detectedJenis = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || jRaw;
-                    } else if (jUp === 'RUTIN') {
-                        detectedJenis = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || jRaw;
-                    } else {
-                        detectedJenis = jRaw;
-                    }
+                    let jRaw = matchJenis[1].trim().toUpperCase();
+                    if (jRaw === 'PENGECEKAN') detectedJenis = 'PENGECEKAN';
+                    else if (jRaw === 'RUTIN') detectedJenis = 'RUTIN';
+                    else detectedJenis = 'PEKERJAAN';
                 } else {
                     let gabungTeks = `${rawKetStr} ${item.partText || ''}`.toLowerCase();
-                    if (gabungTeks.includes('rutin') || gabungTeks.includes('preventive')) {
-                        detectedJenis = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
-                    } else if (gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi')) {
-                        detectedJenis = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
-                    }
+                    if (gabungTeks.includes('rutin') || gabungTeks.includes('preventive')) detectedJenis = 'RUTIN';
+                    else if (gabungTeks.includes('cek') || gabungTeks.includes('pengecekan') || gabungTeks.includes('kontrol') || gabungTeks.includes('monitoring') || gabungTeks.includes('inspeksi')) detectedJenis = 'PENGECEKAN';
                 }
                 
                 if (jenisFilter !== 'ALL') {
-                    if (detectedJenis.toLowerCase() !== jenisFilter.toLowerCase()) return false;
+                    let targetJ = (jenisFilter === 'PERBAIKAN') ? 'PEKERJAAN' : jenisFilter;
+                    if (detectedJenis !== targetJ) return false;
                 }
 
                 return `${rawItemTgl} ${formatTanggalIndo(item.tanggal)} ${item.shift} ${item.mesin} ${item.personel} ${item.partText} ${item.jamMulai} ${item.ket}`.toLowerCase().includes(searchKeyword);
@@ -3991,40 +4097,31 @@
             filteredList.forEach(item => {
                 let rawKet = item.ket || "";
                 let matchJenis = rawKet.match(/\[Jenis:\s*([^\]]+)\]/i);
-                let listJenisMaster = cloudData.settings.masterJenisLaporan || ["Pekerjaan / Perbaikan", "Pengecekan / Kontrol", "Pekerjaan Rutin / Preventive"];
-                let badgeLabel = listJenisMaster[0] || 'Pekerjaan / Perbaikan';
+                let badgeJenis = 'PEKERJAAN';
                 if (matchJenis) {
-                    let jRaw = matchJenis[1].trim();
-                    let jUp = jRaw.toUpperCase();
-                    if (jUp === 'PEKERJAAN' || jUp === 'PERBAIKAN') {
-                        badgeLabel = listJenisMaster.find(x => /pekerjaan|perbaikan/i.test(x)) || 'Pekerjaan / Perbaikan';
-                    } else if (jUp === 'PENGECEKAN') {
-                        badgeLabel = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
-                    } else if (jUp === 'RUTIN') {
-                        badgeLabel = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
-                    } else {
-                        badgeLabel = jRaw;
-                    }
+                    let jRaw = matchJenis[1].trim().toUpperCase();
+                    if (jRaw === 'PENGECEKAN') badgeJenis = 'PENGECEKAN';
+                    else if (jRaw === 'RUTIN') badgeJenis = 'RUTIN';
                 } else {
-                    if (/rutin|preventive/i.test(rawKet)) badgeLabel = listJenisMaster.find(x => /rutin|preventive/i.test(x)) || 'Pekerjaan Rutin / Preventive';
-                    else if (/cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet)) badgeLabel = listJenisMaster.find(x => /pengecekan|kontrol/i.test(x)) || 'Pengecekan / Kontrol';
+                    if (/rutin|preventive/i.test(rawKet)) badgeJenis = 'RUTIN';
+                    else if (/cek|pengecekan|kontrol|monitoring|inspeksi/i.test(rawKet)) badgeJenis = 'PENGECEKAN';
                 }
-                let badgeStyle = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;';
-                if (/cek|kontrol|inspeksi/i.test(badgeLabel)) {
-                    badgeStyle = 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
-                } else if (/rutin|preventive|pm/i.test(badgeLabel)) {
-                    badgeStyle = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;';
-                } else if (!/pekerjaan|perbaikan/i.test(badgeLabel)) {
-                    badgeStyle = 'background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff;';
+                let isEngLang = (typeof currentLang !== 'undefined' && currentLang === 'en');
+                let jenisBadge = '';
+                if (badgeJenis === 'PENGECEKAN') {
+                    jenisBadge = `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔍 ${isEngLang ? 'Inspection' : 'Pengecekan'}</span>`;
+                } else if (badgeJenis === 'RUTIN') {
+                    jenisBadge = `<span style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🔄 ${isEngLang ? 'Routine' : 'Rutin'}</span>`;
+                } else {
+                    jenisBadge = `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">🛠️ ${isEngLang ? 'Repair / Work' : 'Pekerjaan'}</span>`;
                 }
-                let jenisBadge = `<span style="${badgeStyle} padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:inline-block; margin-top:3px;">${getJenisIcon(badgeLabel)} ${escapeHtml(badgeLabel)}</span>`;
 
                 let matchEquip = rawKet.match(/\[Equip:\s*([^\]]+)\]/);
                 let matchIssue = rawKet.match(/\[Issue:\s*([^\]]+)\]/);
                 let equipDisplay = matchEquip ? matchEquip[1] : "-";
                 let issueDisplay = matchIssue ? matchIssue[1] : "-";
                 let fotoSource = extractFotoFromLaporan(item);
-                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/\[Foto:[^\]]+\]/i, '').trim();
+                let descDisplay = rawKet.replace(/\[Jenis:[^\]]+\]\s*/i, '').replace(/\[Equip:[^\]]+\]\s*/, '').replace(/\[Issue:[^\]]+\]\s*/, '').replace(/\[Foto:[^\]]+\]/i, '').replace(/\[PM_DONE:[^\]]+\]/i, '').trim();
                 let fotoBadgeHtml = '';
                 if (fotoSource) {
                     if (fotoSource.startsWith('http://') || fotoSource.startsWith('https://')) {
@@ -4949,6 +5046,494 @@
             }
         }
     
+
+        /* ========================================================
+           FITUR PREVENTIVE MAINTENANCE (GANJIL / GENAP AUTO-RESET BULANAN)
+           - Master pekerjaan cukup diinput 1x (Ganjil / Genap / Setiap Bulan)
+           - Status otomatis reset tiap ganti bulan berdasarkan periode YYYY-MM
+           - Bisa ditambah pekerjaan baru kapan saja
+           - Tersimpan sinkron ke Google Sheets (baik via sheet khusus maupun fallback tag [PM_MASTER] / [PM_LOG] di laporan jika GAS belum diupdate)
+           ======================================================== */
+        const NAMA_BULAN_ID = {
+            "01": "Januari", "02": "Februari", "03": "Maret", "04": "April",
+            "05": "Mei", "06": "Juni", "07": "Juli", "08": "Agustus",
+            "09": "September", "10": "Oktober", "11": "November", "12": "Desember"
+        };
+
+        function getJenisBulan(bulanStr) {
+            const num = parseInt(bulanStr, 10);
+            if (isNaN(num)) return "GANJIL";
+            return (num % 2 === 1) ? "GANJIL" : "GENAP";
+        }
+
+        function getCombinedPMMasterList() {
+            const map = new Map();
+            (cloudData.preventiveMaster || []).forEach(item => {
+                if (item && item.id !== undefined) map.set(String(item.id), item);
+            });
+            // Fallback sinkronisasi lintas perangkat melalui catatan khusus di cloudData.laporan jika Google Apps Script belum memiliki tab PM
+            (cloudData.laporan || []).forEach(lap => {
+                const ket = String(lap.ket || "");
+                if (ket.startsWith("[PM_MASTER_SYNC]")) {
+                    try {
+                        const jsonStr = ket.replace("[PM_MASTER_SYNC]", "").trim();
+                        const parsed = JSON.parse(jsonStr);
+                        if (parsed && parsed.id !== undefined) {
+                            if (parsed._deleted) {
+                                map.delete(String(parsed.id));
+                            } else {
+                                map.set(String(parsed.id), parsed);
+                            }
+                        }
+                    } catch (e) {}
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        function getCombinedPMLogsList() {
+            const map = new Map();
+            (cloudData.preventiveLogs || []).forEach(log => {
+                if (log && log.pmId !== undefined && log.periode) {
+                    map.set(`${log.pmId}_${log.periode}`, log);
+                }
+            });
+            (cloudData.laporan || []).forEach(lap => {
+                const ket = String(lap.ket || "");
+                const pmDoneMatch = ket.match(/\[PM_DONE:([^|\]]+)\|([^\]]+)\]/);
+                if (pmDoneMatch) {
+                    const pmId = pmDoneMatch[1].trim();
+                    const periode = pmDoneMatch[2].trim();
+                    const cleanCatatan = ket
+                        .replace(/\[Jenis:[^\]]+\]\s*/i, '')
+                        .replace(/\[Equip:[^\]]+\]\s*/i, '')
+                        .replace(/\[Issue:[^\]]+\]\s*/i, '')
+                        .replace(/\[PM_DONE:[^\]]+\]\s*/i, '')
+                        .replace(/^-\s*/, '')
+                        .trim();
+                    map.set(`${pmId}_${periode}`, {
+                        pmId: pmId,
+                        periode: periode,
+                        tanggal: normalizeDateToWIB_YMD(lap.tanggal),
+                        personel: lap.personel || "-",
+                        catatan: cleanCatatan || "Selesai",
+                        laporanId: lap.id
+                    });
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        async function simpanItemPM() {
+            const editId = document.getElementById('edit-pm-id').value;
+            const mesin = document.getElementById('pm-mesin').value;
+            const siklus = document.getElementById('pm-siklus').value;
+            const equipment = document.getElementById('pm-equipment').value.trim();
+            const pekerjaan = document.getElementById('pm-pekerjaan').value.trim();
+            const standar = document.getElementById('pm-standar').value.trim() || "-";
+
+            if (!equipment || !pekerjaan) {
+                alert("Kolom Equipment dan Item Pekerjaan PM wajib diisi!");
+                return;
+            }
+
+            const btn = document.getElementById('btn-save-pm');
+            btn.innerText = "MENYIMPAN...";
+            btn.disabled = true;
+
+            const itemObj = {
+                id: editId ? parseInt(editId, 10) : Date.now(),
+                mesin: mesin,
+                siklus: siklus,
+                equipment: equipment,
+                pekerjaan: pekerjaan,
+                standar: standar,
+                createdBy: currentUser || "Admin",
+                updatedAt: getWIBDateTimeString()
+            };
+
+            if (!cloudData.preventiveMaster) cloudData.preventiveMaster = [];
+            const existingIdx = cloudData.preventiveMaster.findIndex(x => String(x.id) === String(itemObj.id));
+            if (existingIdx !== -1) {
+                cloudData.preventiveMaster[existingIdx] = itemObj;
+            } else {
+                cloudData.preventiveMaster.push(itemObj);
+            }
+
+            // Simpan marker sinkronisasi ke cloudData.laporan agar tetap tersinkron ke semua HP/PC via Google Sheets yang ada
+            const syncRecord = {
+                id: Number(itemObj.id) + 900000000000,
+                mesin: mesin,
+                tanggal: "2000-01-01",
+                shift: "SYSTEM",
+                personel: currentUser || "System",
+                partText: "-",
+                jamMulai: "-",
+                jamSelesai: 0,
+                ket: `[PM_MASTER_SYNC] ${JSON.stringify(itemObj)}`
+            };
+            cloudData.laporan = (cloudData.laporan || []).filter(l => String(l.id) !== String(syncRecord.id));
+            cloudData.laporan.push(syncRecord);
+
+            saveLocalAppData();
+            renderPreventiveTable();
+
+            try {
+                await sendDataToSheets({ action: 'preventiveMaster', type: editId ? 'update' : 'add', row: itemObj }).catch(() => {});
+                await sendDataToSheets({ action: 'laporan', type: editId ? 'update' : 'add', row: syncRecord }).catch(() => {});
+                alert(editId ? "✅ Item Preventive Maintenance berhasil diperbarui!" : "✅ Item Preventive Maintenance berhasil ditambahkan! Akan otomatis muncul setiap jadwal bulannya.");
+                cancelEditPM();
+            } finally {
+                btn.innerText = "💾 SIMPAN ITEM PREVENTIVE";
+                btn.disabled = false;
+            }
+        }
+
+        function editItemPM(id) {
+            const list = getCombinedPMMasterList();
+            const target = list.find(x => String(x.id) === String(id));
+            if (!target) return;
+
+            document.getElementById('edit-pm-id').value = target.id;
+            if (target.mesin) document.getElementById('pm-mesin').value = target.mesin;
+            if (target.siklus) document.getElementById('pm-siklus').value = target.siklus;
+            document.getElementById('pm-equipment').value = target.equipment || "";
+            document.getElementById('pm-pekerjaan').value = target.pekerjaan || "";
+            document.getElementById('pm-standar').value = (target.standar && target.standar !== "-") ? target.standar : "";
+
+            document.getElementById('form-pm-title').innerText = `✏️ Edit Item Preventive Maintenance (${target.mesin} - ${target.equipment})`;
+            document.getElementById('btn-save-pm').innerText = "💾 PERBARUI ITEM PREVENTIVE";
+            document.getElementById('btn-cancel-pm').style.display = "inline-block";
+            scrollToTop();
+        }
+
+        function cancelEditPM() {
+            document.getElementById('edit-pm-id').value = "";
+            document.getElementById('pm-equipment').value = "";
+            document.getElementById('pm-pekerjaan').value = "";
+            document.getElementById('pm-standar').value = "";
+            document.getElementById('form-pm-title').innerText = "➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)";
+            document.getElementById('btn-save-pm').innerText = "💾 SIMPAN ITEM PREVENTIVE";
+            document.getElementById('btn-cancel-pm').style.display = "none";
+        }
+
+        async function hapusItemPM(id) {
+            if (!confirm("Hapus item pekerjaan ini dari daftar master Preventive Maintenance?")) return;
+
+            cloudData.preventiveMaster = (cloudData.preventiveMaster || []).filter(x => String(x.id) !== String(id));
+            const deletedMarker = { id: parseInt(id, 10) || id, _deleted: true };
+            const syncRecord = {
+                id: (Number(id) || Date.now()) + 900000000000,
+                mesin: "SYSTEM",
+                tanggal: "2000-01-01",
+                shift: "SYSTEM",
+                personel: currentUser || "System",
+                partText: "-",
+                jamMulai: "-",
+                jamSelesai: 0,
+                ket: `[PM_MASTER_SYNC] ${JSON.stringify(deletedMarker)}`
+            };
+            cloudData.laporan = (cloudData.laporan || []).filter(l => String(l.id) !== String(syncRecord.id));
+            cloudData.laporan.push(syncRecord);
+
+            saveLocalAppData();
+            renderPreventiveTable();
+
+            await sendDataToSheets({ action: 'preventiveMaster', type: 'delete', id: parseInt(id, 10) || id }).catch(() => {});
+            await sendDataToSheets({ action: 'laporan', type: 'add', row: syncRecord }).catch(() => {});
+            alert("🗑️ Item Preventive Maintenance berhasil dihapus.");
+        }
+
+        function bukaModalKonfirmasiPM(id) {
+            const list = getCombinedPMMasterList();
+            const item = list.find(x => String(x.id) === String(id));
+            if (!item) return;
+
+            const selBulan = document.getElementById('pm-filter-bulan').value;
+            const selTahun = document.getElementById('pm-filter-tahun').value;
+            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
+            const jenisBln = getJenisBulan(selBulan);
+
+            document.getElementById('modal-pm-id').value = item.id;
+            document.getElementById('modal-pm-detail').innerHTML = `
+                <div><strong>📅 Periode PM:</strong> ${namaBulan} ${selTahun} (Bulan ${jenisBln})</div>
+                <div><strong>⚙️ Unit Mesin:</strong> ${escapeHtml(item.mesin)} | <strong>Equipment:</strong> ${escapeHtml(item.equipment)}</div>
+                <div><strong>🛠️ Pekerjaan:</strong> ${escapeHtml(item.pekerjaan)}</div>
+                <div><strong>📏 Standar:</strong> ${escapeHtml(item.standar || '-')}</div>
+            `;
+
+            const todayYMD = getWIBDateString();
+            const defaultDate = todayYMD.startsWith(`${selTahun}-${selBulan}`) ? todayYMD : `${selTahun}-${selBulan}-01`;
+            document.getElementById('modal-pm-tanggal').value = defaultDate;
+            document.getElementById('modal-pm-personel').value = currentUser || "";
+            document.getElementById('modal-pm-catatan').value = "";
+            document.getElementById('modal-konfirmasi-pm').style.display = 'flex';
+            setTimeout(() => document.getElementById('modal-pm-catatan').focus(), 100);
+        }
+
+        function tutupModalPM() {
+            document.getElementById('modal-konfirmasi-pm').style.display = 'none';
+            document.getElementById('modal-pm-id').value = "";
+        }
+
+        async function submitKonfirmasiPM() {
+            const pmId = document.getElementById('modal-pm-id').value;
+            const tglKerja = document.getElementById('modal-pm-tanggal').value || getWIBDateString();
+            const pelaksana = document.getElementById('modal-pm-personel').value.trim() || currentUser || "Teknisi";
+            const catatan = document.getElementById('modal-pm-catatan').value.trim();
+
+            if (!catatan) {
+                alert("Harap isi hasil pengecekan / tindakan PM terlebih dahulu!");
+                document.getElementById('modal-pm-catatan').focus();
+                return;
+            }
+
+            const list = getCombinedPMMasterList();
+            const item = list.find(x => String(x.id) === String(pmId));
+            if (!item) return;
+
+            const selBulan = document.getElementById('pm-filter-bulan').value;
+            const selTahun = document.getElementById('pm-filter-tahun').value;
+            const periodeKey = `${selTahun}-${selBulan}`;
+            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
+
+            const btn = document.getElementById('btn-submit-modal-pm');
+            btn.innerText = "Menyimpan...";
+            btn.disabled = true;
+
+            const laporanId = Date.now();
+            const autoLaporan = {
+                id: laporanId,
+                mesin: item.mesin,
+                tanggal: tglKerja,
+                shift: "Shift 1",
+                personel: pelaksana,
+                partText: "-",
+                jamMulai: "00:00 - 00:00",
+                jamSelesai: 0,
+                ket: `[Jenis: RUTIN] [Equip: ${item.equipment}] [Issue: Preventive Maintenance (${namaBulan} ${selTahun})] - ${item.pekerjaan} | Hasil: ${catatan} [PM_DONE:${item.id}|${periodeKey}]`,
+                _editedAt: Date.now()
+            };
+
+            const logObj = {
+                pmId: String(item.id),
+                periode: periodeKey,
+                tanggal: tglKerja,
+                personel: pelaksana,
+                catatan: catatan,
+                laporanId: laporanId
+            };
+
+            if (!cloudData.preventiveLogs) cloudData.preventiveLogs = [];
+            cloudData.preventiveLogs = cloudData.preventiveLogs.filter(l => !(String(l.pmId) === String(item.id) && l.periode === periodeKey));
+            cloudData.preventiveLogs.push(logObj);
+
+            if (!cloudData.laporan) cloudData.laporan = [];
+            cloudData.laporan.push(autoLaporan);
+
+            saveLocalAppData();
+            tutupModalPM();
+            renderPreventiveTable();
+            renderHistoriTable();
+
+            try {
+                await sendDataToSheets({ action: 'preventiveLogs', type: 'add', row: logObj }).catch(() => {});
+                await sendDataToSheets({ action: 'laporan', type: 'add', row: autoLaporan }).catch(() => {});
+                alert(`✅ Preventive Maintenance "${item.pekerjaan}" berhasil ditandai SELESAI untuk bulan ${namaBulan} ${selTahun} dan otomatis masuk ke Histori!`);
+            } finally {
+                btn.innerText = "✔️ Simpan & Tandai Selesai";
+                btn.disabled = false;
+            }
+        }
+
+        async function resetStatusPMBulanIni(pmId) {
+            const selBulan = document.getElementById('pm-filter-bulan').value;
+            const selTahun = document.getElementById('pm-filter-tahun').value;
+            const periodeKey = `${selTahun}-${selBulan}`;
+
+            if (!confirm("Batalkan status selesai (reset ke Belum Dikerjakan) untuk bulan ini?")) return;
+
+            const logs = getCombinedPMLogsList();
+            const targetLog = logs.find(l => String(l.pmId) === String(pmId) && l.periode === periodeKey);
+
+            cloudData.preventiveLogs = (cloudData.preventiveLogs || []).filter(l => !(String(l.pmId) === String(pmId) && l.periode === periodeKey));
+            if (targetLog && targetLog.laporanId) {
+                cloudData.laporan = (cloudData.laporan || []).filter(lap => String(lap.id) !== String(targetLog.laporanId));
+                await sendDataToSheets({ action: 'laporan', type: 'delete', id: targetLog.laporanId }).catch(() => {});
+            }
+
+            saveLocalAppData();
+            renderPreventiveTable();
+            renderHistoriTable();
+        }
+
+        function renderPreventiveTable() {
+            const tbody = document.getElementById('pm-table-body');
+            if (!tbody) return;
+
+            const selBulan = document.getElementById('pm-filter-bulan') ? document.getElementById('pm-filter-bulan').value : getWIBDateString().split('-')[1];
+            const selTahun = document.getElementById('pm-filter-tahun') ? document.getElementById('pm-filter-tahun').value : getWIBDateString().split('-')[0];
+            const periodeKey = `${selTahun}-${selBulan}`;
+            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
+            const jenisBulanAktif = getJenisBulan(selBulan);
+
+            const bannerEl = document.getElementById('pm-active-period-banner');
+            if (bannerEl) {
+                const badgeEmoji = jenisBulanAktif === "GANJIL" ? "🔴" : "🔵";
+                bannerEl.innerHTML = `${namaBulan.toUpperCase()} ${selTahun} &mdash; ${badgeEmoji} BULAN ${jenisBulanAktif}`;
+            }
+
+            const filterSiklus = document.getElementById('pm-filter-siklus') ? document.getElementById('pm-filter-siklus').value : "AKTIF";
+            const filterMesin = document.getElementById('pm-filter-mesin') ? document.getElementById('pm-filter-mesin').value : "ALL";
+            const keyword = (document.getElementById('search-pm') ? document.getElementById('search-pm').value : "").toLowerCase();
+
+            const masterList = getCombinedPMMasterList();
+            const logsList = getCombinedPMLogsList();
+            const logMap = new Map();
+            logsList.forEach(l => {
+                if (l.periode === periodeKey) logMap.set(String(l.pmId), l);
+            });
+
+            // Hitung statistik khusus untuk jadwal yang aktif pada bulan terpilih
+            const activeForMonth = masterList.filter(item => {
+                const s = String(item.siklus || "GANJIL").toUpperCase();
+                return s === "SETIAP_BULAN" || s === jenisBulanAktif;
+            });
+            const totalAktif = activeForMonth.length;
+            const doneAktif = activeForMonth.filter(item => logMap.has(String(item.id))).length;
+            const pendingAktif = Math.max(0, totalAktif - doneAktif);
+            const pctAktif = totalAktif > 0 ? Math.round((doneAktif / totalAktif) * 100) : 0;
+
+            if (document.getElementById('pm-stat-total')) document.getElementById('pm-stat-total').innerText = `${totalAktif} Item`;
+            if (document.getElementById('pm-stat-done')) document.getElementById('pm-stat-done').innerText = `${doneAktif} Item`;
+            if (document.getElementById('pm-stat-pending')) document.getElementById('pm-stat-pending').innerText = `${pendingAktif} Item`;
+            if (document.getElementById('pm-stat-percent')) document.getElementById('pm-stat-percent').innerText = `${pctAktif}%`;
+
+            const badgePending = document.getElementById('badge-pm-pending');
+            if (badgePending) {
+                if (pendingAktif > 0) {
+                    badgePending.style.display = 'inline-block';
+                    badgePending.innerText = pendingAktif;
+                } else {
+                    badgePending.style.display = 'none';
+                }
+            }
+
+            // Filter tampilan tabel
+            const filtered = masterList.filter(item => {
+                const s = String(item.siklus || "GANJIL").toUpperCase();
+                if (filterSiklus === "AKTIF") {
+                    if (s !== "SETIAP_BULAN" && s !== jenisBulanAktif) return false;
+                } else if (filterSiklus !== "ALL") {
+                    if (s !== filterSiklus) return false;
+                }
+
+                if (filterMesin !== "ALL" && String(item.mesin || "").toUpperCase() !== filterMesin.toUpperCase()) {
+                    return false;
+                }
+
+                const combined = `${item.mesin} ${item.siklus} ${item.equipment} ${item.pekerjaan} ${item.standar}`.toLowerCase();
+                return combined.includes(keyword);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#666; padding:18px;">Belum ada jadwal Preventive Maintenance untuk filter ini. Silakan tambah pekerjaan baru di form atas (cukup 1x input untuk berulang tiap bulan).</td></tr>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach((item, idx) => {
+                const s = String(item.siklus || "GANJIL").toUpperCase();
+                let siklusBadge = "";
+                if (s === "GANJIL") {
+                    siklusBadge = `<span style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🔴 BULAN GANJIL</span>`;
+                } else if (s === "GENAP") {
+                    siklusBadge = `<span style="background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🔵 BULAN GENAP</span>`;
+                } else {
+                    siklusBadge = `<span style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🟢 SETIAP BULAN</span>`;
+                }
+
+                const doneLog = logMap.get(String(item.id));
+                const isScheduledThisMonth = (s === "SETIAP_BULAN" || s === jenisBulanAktif);
+
+                let statusHtml = "";
+                let pelaksanaHtml = "-";
+                let actionHtml = "";
+
+                if (doneLog) {
+                    statusHtml = `<span style="background:#28a745; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">✅ SELESAI (${namaBulan})</span><br><small style="color:#155724;">Tgl: ${formatTanggalIndo(doneLog.tanggal)}</small>`;
+                    pelaksanaHtml = `<strong>👤 ${escapeHtml(doneLog.personel)}</strong><br><small style="color:#333;">${escapeHtml(doneLog.catatan)}</small>`;
+                    actionHtml = `
+                        <button class="btn-action" style="background:#6c757d; color:white;" onclick="resetStatusPMBulanIni('${item.id}')" title="Reset status bulan ini">↩️ Reset</button>
+                        <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
+                        <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
+                    `;
+                } else {
+                    statusHtml = isScheduledThisMonth
+                        ? `<span style="background:#dc3545; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">⏳ BELUM DIKERJAKAN</span>`
+                        : `<span style="background:#e2e8f0; color:#475569; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">⏸️ JADWAL BULAN ${s}</span>`;
+                    actionHtml = `
+                        <button class="btn-action btn-done" onclick="bukaModalKonfirmasiPM('${item.id}')">✔️ Kerjakan</button>
+                        <button class="btn-action btn-edit" onclick="editItemPM('${item.id}')">Edit</button>
+                        <button class="btn-action btn-delete" onclick="hapusItemPM('${item.id}')">Hapus</button>
+                    `;
+                }
+
+                const rowBgStyle = doneLog ? 'style="background-color:#f0fdf4;"' : '';
+                html += `<tr ${rowBgStyle}>
+                    <td style="text-align:center;">${idx + 1}</td>
+                    <td><strong>⚙️ ${escapeHtml(item.mesin)}</strong></td>
+                    <td>${siklusBadge}</td>
+                    <td><strong>${escapeHtml(item.equipment)}</strong></td>
+                    <td>
+                        <div style="font-weight:bold; color:#1e293b;">${escapeHtml(item.pekerjaan)}</div>
+                        ${item.standar && item.standar !== "-" ? `<small style="color:#003399;">📏 Standar: ${escapeHtml(item.standar)}</small>` : ""}
+                    </td>
+                    <td>${statusHtml}</td>
+                    <td>${pelaksanaHtml}</td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function exportPMExcel() {
+            const selBulan = document.getElementById('pm-filter-bulan').value;
+            const selTahun = document.getElementById('pm-filter-tahun').value;
+            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
+            const rawRows = extractTableDataForPdf('pm-table-body', true);
+            if (!rawRows.length) { alert("Tidak ada data Preventive Maintenance untuk diekspor."); return; }
+
+            generateStyledExcel({
+                title: 'JADWAL & CHECKLIST PREVENTIVE MAINTENANCE',
+                subtitle: `Periode: ${namaBulan} ${selTahun} (${getJenisBulan(selBulan)})`,
+                sheetName: `PM ${namaBulan} ${selTahun}`,
+                headers: ['No', 'Unit Mesin', 'Siklus Bulan', 'Equipment', 'Item Pekerjaan PM & Standar', 'Status Bulan Ini', 'Pelaksana & Keterangan'],
+                rows: rawRows,
+                colWidths: [6, 16, 18, 22, 38, 20, 32],
+                rowStyler: (rowData) => {
+                    const st = String(rowData[5] || '').toUpperCase();
+                    if (st.includes('SELESAI')) return { bg: 'FFD4EDDA', color: 'FF155724', bold: true };
+                    if (st.includes('BELUM')) return { bg: 'FFF8D7DA', color: 'FF721C24' };
+                    return null;
+                },
+                filename: `Preventive_Maintenance_${namaBulan}_${selTahun}.xlsx`
+            });
+        }
+
+        function cetakPDFPM() {
+            const selBulan = document.getElementById('pm-filter-bulan').value;
+            const selTahun = document.getElementById('pm-filter-tahun').value;
+            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
+            generateTablePdf({
+                title: 'JADWAL & CHECKLIST PREVENTIVE MAINTENANCE',
+                periodeText: `Periode: ${namaBulan} ${selTahun} (Bulan ${getJenisBulan(selBulan)})`,
+                headers: ['No', 'Unit Mesin', 'Siklus Bulan', 'Equipment', 'Item Pekerjaan PM & Standar', 'Status Bulan Ini', 'Pelaksana & Keterangan'],
+                rows: extractTableDataForPdf('pm-table-body', true),
+                filename: `Preventive_Maintenance_${namaBulan}_${selTahun}.pdf`
+            });
+        }
+
         /* ========================================================
            SISTEM DWI-BAHASA (INDONESIA / ENGLISH - IN/ENG)
            ======================================================== */
@@ -4965,6 +5550,7 @@
                 // Sidebar Defaults
                 "LAPORAN HARIAN": "LAPORAN HARIAN",
                 "PERINTAH PEKERJAAN": "PERINTAH PEKERJAAN",
+                "PREVENTIVE MAINTENANCE": "PREVENTIVE MAINTENANCE",
                 "HISTORI & DOWNTIME": "HISTORI & DOWNTIME",
                 "LAPORAN SPARE PART": "LAPORAN SPARE PART",
                 "LAPORAN DOWNTIME": "LAPORAN DOWNTIME",
@@ -5109,6 +5695,7 @@
                 // Sidebar Defaults
                 "LAPORAN HARIAN": "DAILY REPORT",
                 "PERINTAH PEKERJAAN": "WORK ORDERS",
+                "PREVENTIVE MAINTENANCE": "PREVENTIVE MAINTENANCE",
                 "HISTORI & DOWNTIME": "HISTORY & DOWNTIME",
                 "LAPORAN SPARE PART": "SPARE PART REPORT",
                 "LAPORAN DOWNTIME": "DOWNTIME REPORT",
@@ -5307,7 +5894,6 @@
             currentLang = (lang === 'en') ? 'en' : 'id';
             localStorage.setItem('app_language', currentLang);
             applyLanguageDOM(currentLang);
-            if (typeof populateJenisDropdowns === 'function') populateJenisDropdowns();
             if (typeof renderHistoriTable === 'function') renderHistoriTable();
         }
 
@@ -5318,4 +5904,4 @@
     </script>
 </body>
 </html>
-Analyzing
+Connecting toGoogle Drive
