@@ -33,7 +33,7 @@
                 <textarea id="modal-pm-catatan" rows="3" placeholder="Contoh: Sudah dilakukan greasing, oli normal, kondisi baik..."></textarea>
             </div>
             <div style="background:#e8f5e9; padding:8px 10px; border-radius:6px; font-size:11px; color:#1b5e20; margin-bottom:10px;">
-                ℹ️ Otomatis tercatat ke <b>Histori & Downtime</b> dengan kategori <b>Pekerjaan Rutin / Preventive</b>.
+                ℹ️ Tercatat khusus di <b>Preventive Maintenance</b> untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).
             </div>
             <div class="modal-footer-btns">
                 <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalPM()">Batal</button>
@@ -1029,6 +1029,7 @@
                                     <option value="GANJIL">🔴 BULAN GANJIL (Jan, Mar, Mei, Jul, Sep, Nov)</option>
                                     <option value="GENAP">🔵 BULAN GENAP (Feb, Apr, Jun, Agu, Okt, Des)</option>
                                     <option value="SETIAP_BULAN">🟢 SETIAP BULAN (Ganjil & Genap)</option>
+                                    <option value="PEKERJAAN_TAMBAHAN">🟡 PEKERJAAN TAMBAHAN (Insidental / Sekali Bulan)</option>
                                 </select>
                             </div>
                             <div class="form-group" style="margin-bottom:8px;">
@@ -1057,10 +1058,11 @@
                         <label>Filter Siklus:</label>
                         <select id="pm-filter-siklus" onchange="renderPreventiveTable()">
                             <option value="AKTIF">📌 Jadwal Aktif Bulan Terpilih (Otomatis)</option>
-                            <option value="ALL">📋 Semua Master Jadwal (Ganjil + Genap)</option>
+                            <option value="ALL">📋 Semua Master Jadwal (Ganjil + Genap + Tambahan)</option>
                             <option value="GANJIL">🔴 Hanya Bulan Ganjil</option>
                             <option value="GENAP">🔵 Hanya Bulan Genap</option>
                             <option value="SETIAP_BULAN">🟢 Hanya Setiap Bulan</option>
+                            <option value="PEKERJAAN_TAMBAHAN">🟡 Hanya Pekerjaan Tambahan</option>
                         </select>
                         <label>Unit Mesin:</label>
                         <select id="pm-filter-mesin" onchange="renderPreventiveTable()">
@@ -4054,7 +4056,9 @@
             const jenisFilter = document.getElementById('filter-jenis-laporan') ? document.getElementById('filter-jenis-laporan').value : 'ALL';
 
             let filteredList = sortedLaporan.filter(item => {
-                if (String(item.ket || '').startsWith('[PM_MASTER_SYNC]')) return false;
+                const ketTrim = String(item.ket || '').trim();
+                if (ketTrim.startsWith('[PM_MASTER_SYNC]') || ketTrim.startsWith('[PM_LOG_SYNC]') || ketTrim.includes('[PM_DONE:')) return false;
+                if (String(item.shift || '').trim() === 'PM_LOG') return false;
                 if(mesinFilter !== 'ALL' && String(item.mesin || '').trim().toUpperCase() !== mesinFilter.toUpperCase()) return false;
 
                 let rawItemTgl = normalizeDateToWIB_YMD(item.tanggal);
@@ -5100,28 +5104,39 @@
             });
             (cloudData.laporan || []).forEach(lap => {
                 const ket = String(lap.ket || "");
-                const pmDoneMatch = ket.match(/\[PM_DONE:([^|\]]+)\|([^\]]+)\]/);
-                if (pmDoneMatch) {
-                    const pmId = pmDoneMatch[1].trim();
-                    const periode = pmDoneMatch[2].trim();
-                    const cleanCatatan = ket
-                        .replace(/\[Jenis:[^\]]+\]\s*/i, '')
-                        .replace(/\[Equip:[^\]]+\]\s*/i, '')
-                        .replace(/\[Issue:[^\]]+\]\s*/i, '')
-                        .replace(/\[PM_DONE:[^\]]+\]\s*/i, '')
-                        .replace(/^-\s*/, '')
-                        .trim();
-                    map.set(`${pmId}_${periode}`, {
-                        pmId: pmId,
-                        periode: periode,
-                        tanggal: normalizeDateToWIB_YMD(lap.tanggal),
-                        personel: lap.personel || "-",
-                        catatan: cleanCatatan || "Selesai",
-                        laporanId: lap.id
-                    });
+                if (ket.startsWith("[PM_LOG_SYNC]")) {
+                    try {
+                        const parsed = JSON.parse(ket.replace("[PM_LOG_SYNC]", "").trim());
+                        if (parsed && parsed.pmId !== undefined && parsed.periode) {
+                            map.set(`${parsed.pmId}_${parsed.periode}`, {
+                                pmId: String(parsed.pmId),
+                                periode: String(parsed.periode),
+                                tanggal: normalizeDateToWIB_YMD(parsed.tanggal || lap.tanggal),
+                                personel: parsed.personel || lap.personel || "-",
+                                catatan: parsed.catatan || "Selesai",
+                                syncId: lap.id
+                            });
+                        }
+                    } catch (e) {}
                 }
             });
             return Array.from(map.values());
+        }
+
+        function getSelectedPMPeriodeKey() {
+            const selBulan = document.getElementById('pm-filter-bulan') ? document.getElementById('pm-filter-bulan').value : getWIBDateString().split('-')[1];
+            const selTahun = document.getElementById('pm-filter-tahun') ? document.getElementById('pm-filter-tahun').value : getWIBDateString().split('-')[0];
+            return `${selTahun}-${selBulan}`;
+        }
+
+        function isPMItemActiveInPeriode(item, periodeKey, jenisBulanAktif) {
+            if (!item) return false;
+            const s = String(item.siklus || "GANJIL").toUpperCase();
+            if (s === "PEKERJAAN_TAMBAHAN") {
+                const itemPeriode = item.periode || (item.id ? normalizeDateToWIB_YMD(new Date(Number(item.id))).slice(0, 7) : "");
+                return itemPeriode === periodeKey;
+            }
+            return s === "SETIAP_BULAN" || s === jenisBulanAktif;
         }
 
         async function simpanItemPM() {
@@ -5141,10 +5156,14 @@
             btn.innerText = "MENYIMPAN...";
             btn.disabled = true;
 
+            const existingTarget = editId ? getCombinedPMMasterList().find(x => String(x.id) === String(editId)) : null;
+            const periodeAktif = (existingTarget && existingTarget.periode) ? existingTarget.periode : getSelectedPMPeriodeKey();
+
             const itemObj = {
                 id: editId ? parseInt(editId, 10) : Date.now(),
                 mesin: mesin,
                 siklus: siklus,
+                periode: siklus === "PEKERJAAN_TAMBAHAN" ? periodeAktif : "",
                 equipment: equipment,
                 pekerjaan: pekerjaan,
                 standar: standar,
@@ -5181,7 +5200,11 @@
             try {
                 await sendDataToSheets({ action: 'preventiveMaster', type: editId ? 'update' : 'add', row: itemObj }).catch(() => {});
                 await sendDataToSheets({ action: 'laporan', type: editId ? 'update' : 'add', row: syncRecord }).catch(() => {});
-                alert(editId ? "✅ Item Preventive Maintenance berhasil diperbarui!" : "✅ Item Preventive Maintenance berhasil ditambahkan! Akan otomatis muncul setiap jadwal bulannya.");
+                if (siklus === "PEKERJAAN_TAMBAHAN") {
+                    alert(`✅ Pekerjaan Tambahan berhasil ditambahkan khusus untuk periode ${periodeAktif}! Menghapusnya di bulan lain tidak akan menghapus data di bulan ini.`);
+                } else {
+                    alert(editId ? "✅ Item Preventive Maintenance berhasil diperbarui!" : "✅ Item Preventive Maintenance berhasil ditambahkan! Akan otomatis muncul setiap jadwal bulannya.");
+                }
                 cancelEditPM();
             } finally {
                 btn.innerText = "💾 SIMPAN ITEM PREVENTIVE";
@@ -5218,7 +5241,12 @@
         }
 
         async function hapusItemPM(id) {
-            if (!confirm("Hapus item pekerjaan ini dari daftar master Preventive Maintenance?")) return;
+            const target = getCombinedPMMasterList().find(x => String(x.id) === String(id));
+            const isTambahan = target && String(target.siklus || "").toUpperCase() === "PEKERJAAN_TAMBAHAN";
+            const msg = isTambahan
+                ? `Hapus Pekerjaan Tambahan "${target.pekerjaan}" (Periode ${target.periode || 'bulan ini'})? Data di bulan lain tidak akan terpengaruh.`
+                : "Hapus item pekerjaan ini dari daftar master Preventive Maintenance?";
+            if (!confirm(msg)) return;
 
             cloudData.preventiveMaster = (cloudData.preventiveMaster || []).filter(x => String(x.id) !== String(id));
             const deletedMarker = { id: parseInt(id, 10) || id, _deleted: true };
@@ -5241,7 +5269,7 @@
 
             await sendDataToSheets({ action: 'preventiveMaster', type: 'delete', id: parseInt(id, 10) || id }).catch(() => {});
             await sendDataToSheets({ action: 'laporan', type: 'add', row: syncRecord }).catch(() => {});
-            alert("🗑️ Item Preventive Maintenance berhasil dihapus.");
+            alert("🗑️ Item pekerjaan berhasil dihapus.");
         }
 
         function bukaModalKonfirmasiPM(id) {
@@ -5301,35 +5329,44 @@
             btn.innerText = "Menyimpan...";
             btn.disabled = true;
 
-            const laporanId = Date.now();
-            const autoLaporan = {
-                id: laporanId,
-                mesin: item.mesin,
-                tanggal: tglKerja,
-                shift: "Shift 1",
-                personel: pelaksana,
-                partText: "-",
-                jamMulai: "00:00 - 00:00",
-                jamSelesai: 0,
-                ket: `[Jenis: RUTIN] [Equip: ${item.equipment}] [Issue: Preventive Maintenance (${namaBulan} ${selTahun})] - ${item.pekerjaan} | Hasil: ${catatan} [PM_DONE:${item.id}|${periodeKey}]`,
-                _editedAt: Date.now()
-            };
-
             const logObj = {
                 pmId: String(item.id),
                 periode: periodeKey,
                 tanggal: tglKerja,
                 personel: pelaksana,
                 catatan: catatan,
-                laporanId: laporanId
+                mesin: item.mesin,
+                equipment: item.equipment,
+                pekerjaan: item.pekerjaan
             };
 
             if (!cloudData.preventiveLogs) cloudData.preventiveLogs = [];
             cloudData.preventiveLogs = cloudData.preventiveLogs.filter(l => !(String(l.pmId) === String(item.id) && l.periode === periodeKey));
             cloudData.preventiveLogs.push(logObj);
 
-            if (!cloudData.laporan) cloudData.laporan = [];
-            cloudData.laporan.push(autoLaporan);
+            const pmLogSyncRecord = {
+                id: Number(item.id) + 800000000000 + parseInt(selTahun + selBulan, 10),
+                mesin: item.mesin,
+                tanggal: tglKerja,
+                shift: "PM_LOG",
+                personel: pelaksana,
+                partText: "-",
+                jamMulai: "-",
+                jamSelesai: 0,
+                ket: `[PM_LOG_SYNC] ${JSON.stringify(logObj)}`
+            };
+            cloudData.laporan = (cloudData.laporan || []).filter(l => {
+                const k = String(l.ket || "");
+                if (String(l.id) === String(pmLogSyncRecord.id)) return false;
+                if (k.startsWith("[PM_LOG_SYNC]")) {
+                    try {
+                        const p = JSON.parse(k.replace("[PM_LOG_SYNC]", "").trim());
+                        if (String(p.pmId) === String(item.id) && p.periode === periodeKey) return false;
+                    } catch (e) {}
+                }
+                return true;
+            });
+            cloudData.laporan.push(pmLogSyncRecord);
 
             saveLocalAppData();
             tutupModalPM();
@@ -5338,8 +5375,8 @@
 
             try {
                 await sendDataToSheets({ action: 'preventiveLogs', type: 'add', row: logObj }).catch(() => {});
-                await sendDataToSheets({ action: 'laporan', type: 'add', row: autoLaporan }).catch(() => {});
-                alert(`✅ Preventive Maintenance "${item.pekerjaan}" berhasil ditandai SELESAI untuk bulan ${namaBulan} ${selTahun} dan otomatis masuk ke Histori!`);
+                await sendDataToSheets({ action: 'laporan', type: 'add', row: pmLogSyncRecord }).catch(() => {});
+                alert(`✅ Preventive Maintenance "${item.pekerjaan}" berhasil ditandai SELESAI untuk bulan ${namaBulan} ${selTahun}! (Tercatat khusus di tab Preventive Maintenance, tidak masuk ke Histori Laporan Harian).`);
             } finally {
                 btn.innerText = "✔️ Simpan & Tandai Selesai";
                 btn.disabled = false;
@@ -5353,18 +5390,22 @@
 
             if (!confirm("Batalkan status selesai (reset ke Belum Dikerjakan) untuk bulan ini?")) return;
 
-            const logs = getCombinedPMLogsList();
-            const targetLog = logs.find(l => String(l.pmId) === String(pmId) && l.periode === periodeKey);
-
             cloudData.preventiveLogs = (cloudData.preventiveLogs || []).filter(l => !(String(l.pmId) === String(pmId) && l.periode === periodeKey));
-            if (targetLog && targetLog.laporanId) {
-                cloudData.laporan = (cloudData.laporan || []).filter(lap => String(lap.id) !== String(targetLog.laporanId));
-                await sendDataToSheets({ action: 'laporan', type: 'delete', id: targetLog.laporanId }).catch(() => {});
-            }
+            cloudData.laporan = (cloudData.laporan || []).filter(lap => {
+                const k = String(lap.ket || "");
+                if (k.startsWith("[PM_LOG_SYNC]")) {
+                    try {
+                        const p = JSON.parse(k.replace("[PM_LOG_SYNC]", "").trim());
+                        if (String(p.pmId) === String(pmId) && p.periode === periodeKey) return false;
+                    } catch (e) {}
+                }
+                return true;
+            });
 
             saveLocalAppData();
             renderPreventiveTable();
             renderHistoriTable();
+            await sendDataToSheets({ action: 'preventiveLogs', type: 'delete', pmId: String(pmId), periode: periodeKey }).catch(() => {});
         }
 
         function renderPreventiveTable() {
@@ -5394,11 +5435,8 @@
                 if (l.periode === periodeKey) logMap.set(String(l.pmId), l);
             });
 
-            // Hitung statistik khusus untuk jadwal yang aktif pada bulan terpilih
-            const activeForMonth = masterList.filter(item => {
-                const s = String(item.siklus || "GANJIL").toUpperCase();
-                return s === "SETIAP_BULAN" || s === jenisBulanAktif;
-            });
+            // Hitung statistik khusus untuk jadwal yang aktif pada bulan terpilih (termasuk Pekerjaan Tambahan bulan ini)
+            const activeForMonth = masterList.filter(item => isPMItemActiveInPeriode(item, periodeKey, jenisBulanAktif));
             const totalAktif = activeForMonth.length;
             const doneAktif = activeForMonth.filter(item => logMap.has(String(item.id))).length;
             const pendingAktif = Math.max(0, totalAktif - doneAktif);
@@ -5423,7 +5461,11 @@
             const filtered = masterList.filter(item => {
                 const s = String(item.siklus || "GANJIL").toUpperCase();
                 if (filterSiklus === "AKTIF") {
-                    if (s !== "SETIAP_BULAN" && s !== jenisBulanAktif) return false;
+                    if (!isPMItemActiveInPeriode(item, periodeKey, jenisBulanAktif)) return false;
+                } else if (filterSiklus === "PEKERJAAN_TAMBAHAN") {
+                    if (s !== "PEKERJAAN_TAMBAHAN") return false;
+                    const itemPeriode = item.periode || (item.id ? normalizeDateToWIB_YMD(new Date(Number(item.id))).slice(0, 7) : "");
+                    if (itemPeriode && itemPeriode !== periodeKey) return false;
                 } else if (filterSiklus !== "ALL") {
                     if (s !== filterSiklus) return false;
                 }
@@ -5432,7 +5474,7 @@
                     return false;
                 }
 
-                const combined = `${item.mesin} ${item.siklus} ${item.equipment} ${item.pekerjaan} ${item.standar}`.toLowerCase();
+                const combined = `${item.mesin} ${item.siklus} ${item.periode || ''} ${item.equipment} ${item.pekerjaan} ${item.standar}`.toLowerCase();
                 return combined.includes(keyword);
             });
 
@@ -5449,12 +5491,15 @@
                     siklusBadge = `<span style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🔴 BULAN GANJIL</span>`;
                 } else if (s === "GENAP") {
                     siklusBadge = `<span style="background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🔵 BULAN GENAP</span>`;
+                } else if (s === "PEKERJAAN_TAMBAHAN") {
+                    const pLabel = item.periode ? ` (${escapeHtml(item.periode)})` : "";
+                    siklusBadge = `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🟡 PEKERJAAN TAMBAHAN${pLabel}</span>`;
                 } else {
                     siklusBadge = `<span style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🟢 SETIAP BULAN</span>`;
                 }
 
                 const doneLog = logMap.get(String(item.id));
-                const isScheduledThisMonth = (s === "SETIAP_BULAN" || s === jenisBulanAktif);
+                const isScheduledThisMonth = isPMItemActiveInPeriode(item, periodeKey, jenisBulanAktif);
 
                 let statusHtml = "";
                 let pelaksanaHtml = "-";
@@ -5904,4 +5949,4 @@
     </script>
 </body>
 </html>
-Connecting toGoogle Drive
+Analyzing
