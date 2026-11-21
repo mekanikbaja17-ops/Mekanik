@@ -1234,6 +1234,7 @@
                     <h3>
                         <span id="card-histori-title">Histori Kerusakan & Perbaikan</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-action" style="background:#003399; color:white; padding:7px 12px; border-radius:6px;" onclick="bukaModalAuditLog('ALL')"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Admin</button>
                             <button class="btn-export" onclick="exportHistoriExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
                             <button class="btn-pdf" onclick="cetakPDFHistori()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         </div>
@@ -1377,6 +1378,7 @@
                     <h3>
                         <span id="card-sparepart-title">Inventory Spare Part Gudang</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-action" style="background:#003399; color:white; padding:7px 12px; border-radius:6px;" onclick="bukaModalAuditLog('SPARE PART')"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Edit & Stok</button>
                             <button class="btn-export" onclick="exportSparepartExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
                             <button class="btn-pdf" onclick="cetakPDFSparepart()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         </div>
@@ -1735,6 +1737,56 @@
                             <button type="button" class="btn-primary" id="btn-save-admin" onclick="saveAdminSettings()" style="width: auto; padding: 10px 20px;">Simpan Pengaturan Hak Akses</button>
                         </div>
 
+                            <h4 style="color: var(--primary-color); margin-top: 25px; margin-bottom: 12px; font-size: 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <span>🕵️ 6. Riwayat Aktivitas / Audit Log Master Admin (Edit, Hapus, Tambah & Kurangi Part)</span>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" class="btn-export" onclick="exportAuditLogExcel()"><i class="fa-solid fa-file-excel"></i> Excel Log</button>
+                                    <button type="button" class="btn-pdf" onclick="cetakPDFAuditLog()"><i class="fa-solid fa-file-pdf"></i> PDF Log</button>
+                                    <button type="button" class="btn-action btn-delete" onclick="bersihkanAuditLog()"><i class="fa-solid fa-trash"></i> Bersihkan Log</button>
+                                </div>
+                            </h4>
+                            <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:20px;">
+                                <div class="filter-section" style="margin-bottom:10px; padding:8px;">
+                                    <label style="font-size:12px;">Kategori:</label>
+                                    <select id="filter-audit-kategori" onchange="renderAuditLogTable()" style="font-size:12px;">
+                                        <option value="ALL">Semua Aktivitas</option>
+                                        <option value="SPARE PART">📦 Spare Part (Tambah/Edit/Hapus/Masuk/Kurangi)</option>
+                                        <option value="LAPORAN">📝 Laporan Harian (Edit/Hapus/Tambah)</option>
+                                        <option value="DATA PP">📋 Data PP (Tambah/Edit/Hapus)</option>
+                                        <option value="PERINTAH">📢 Perintah Pekerjaan</option>
+                                        <option value="PREVENTIVE">🛠️ Preventive Maintenance</option>
+                                        <option value="KARYAWAN & SETTING">⚙️ Karyawan & Pengaturan</option>
+                                    </select>
+                                    <label style="font-size:12px;">Jenis Aksi:</label>
+                                    <select id="filter-audit-aksi" onchange="renderAuditLogTable()" style="font-size:12px;">
+                                        <option value="ALL">Semua Aksi</option>
+                                        <option value="TAMBAH">➕ Tambah</option>
+                                        <option value="TAMBAH STOK">📥 Tambah Stok (+)</option>
+                                        <option value="KURANGI STOK">📤 Kurangi Stok (-)</option>
+                                        <option value="EDIT">✏️ Edit / Ubah</option>
+                                        <option value="HAPUS">🗑️ Hapus</option>
+                                    </select>
+                                    <input type="text" id="search-audit-log" placeholder="🔍 Cari nama admin, nama part, detail perubahan..." onkeyup="renderAuditLogTable()" style="flex:1; min-width:180px; font-size:12px;">
+                                </div>
+                                <div class="table-responsive" style="max-height:360px; overflow-y:auto;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:135px;">Waktu (WIB)</th>
+                                                <th style="width:130px;">Pelaku / Admin</th>
+                                                <th style="width:120px;">Kategori</th>
+                                                <th style="width:115px;">Aksi</th>
+                                                <th>Detail Perubahan (Item / Part / Sebelum &rarr; Sesudah)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="audit-log-table-body">
+                                            <tr><td colspan="5" style="text-align:center; color:#777;">Belum ada riwayat aktivitas tercatat.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+
                     </div>
                 </div>
 
@@ -1780,6 +1832,56 @@
             </div>
             <div class="modal-footer-btns">
                 <button type="button" class="btn-primary" style="width:auto; padding:9px 18px;" onclick="tutupModalInstall()">Mengerti</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL RIWAYAT AKTIVITAS / AUDIT LOG -->
+    <div id="modal-audit-log" class="modal-overlay">
+        <div class="modal-box" style="max-width: 860px; max-height: 88vh; display:flex; flex-direction:column;">
+            <div class="modal-header">
+                <h3>🕵️ Riwayat Aktivitas (Edit, Hapus, Tambah & Kurangi Part)</h3>
+                <button class="modal-close-btn" onclick="tutupModalAuditLog()">&times;</button>
+            </div>
+            <div class="filter-section" style="margin-bottom:10px; padding:8px;">
+                <select id="modal-audit-kategori" onchange="renderModalAuditLogTable()" style="font-size:12px;">
+                    <option value="ALL">Semua Kategori</option>
+                    <option value="SPARE PART">📦 Spare Part</option>
+                    <option value="LAPORAN">📝 Laporan Harian</option>
+                    <option value="DATA PP">📋 Data PP</option>
+                    <option value="PERINTAH">📢 Perintah Pekerjaan</option>
+                    <option value="PREVENTIVE">🛠️ Preventive Maintenance</option>
+                    <option value="KARYAWAN & SETTING">⚙️ Karyawan & Pengaturan</option>
+                </select>
+                <select id="modal-audit-aksi" onchange="renderModalAuditLogTable()" style="font-size:12px;">
+                    <option value="ALL">Semua Aksi</option>
+                    <option value="TAMBAH">➕ Tambah</option>
+                    <option value="TAMBAH STOK">📥 Tambah Stok (+)</option>
+                    <option value="KURANGI STOK">📤 Kurangi Stok (-)</option>
+                    <option value="EDIT">✏️ Edit</option>
+                    <option value="HAPUS">🗑️ Hapus</option>
+                </select>
+                <input type="text" id="modal-audit-search" placeholder="🔍 Cari nama pelaku, part, mesin..." onkeyup="renderModalAuditLogTable()" style="flex:1; min-width:160px; font-size:12px;">
+            </div>
+            <div class="table-responsive" style="flex:1; overflow-y:auto; margin-top:0;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:130px;">Waktu (WIB)</th>
+                            <th style="width:125px;">Pelaku / Admin</th>
+                            <th style="width:115px;">Kategori</th>
+                            <th style="width:115px;">Aksi</th>
+                            <th>Detail Aktivitas & Perubahan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-audit-table-body"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer-btns" style="margin-top:12px;">
+                <button type="button" class="btn-export" onclick="exportAuditLogExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                <button type="button" class="btn-pdf" onclick="cetakPDFAuditLog()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:8px 16px;" onclick="tutupModalAuditLog()">Tutup</button>
             </div>
         </div>
     </div>
@@ -1874,6 +1976,7 @@
             perintahKerja: [],
             preventiveMaster: [],
             preventiveLogs: [],
+            auditLogs: [],
             sparepart: [], 
             dataPP: [],
             karyawan: [], 
@@ -2138,6 +2241,7 @@
             loadLocalAppData();
             applySettingsToUI();
             renderKaryawanTable();
+            if(typeof renderAuditLogTable === 'function') renderAuditLogTable();
             renderPerintahTable();
             renderDataPPTable();
 
@@ -2159,6 +2263,8 @@
                 if (storedPMMaster) { cloudData.preventiveMaster = JSON.parse(storedPMMaster); }
                 let storedPMLogs = localStorage.getItem('app_pm_logs');
                 if (storedPMLogs) { cloudData.preventiveLogs = JSON.parse(storedPMLogs); }
+                let storedAuditLogs = localStorage.getItem('app_audit_logs');
+                if (storedAuditLogs) { cloudData.auditLogs = JSON.parse(storedAuditLogs); }
                 let storedLaporan = localStorage.getItem('app_laporan_data');
                 if (storedLaporan && (!cloudData.laporan || cloudData.laporan.length === 0)) {
                     cloudData.laporan = JSON.parse(storedLaporan);
@@ -2174,6 +2280,7 @@
                 localStorage.setItem('app_data_pp', JSON.stringify(cloudData.dataPP || []));
                 localStorage.setItem('app_pm_master', JSON.stringify(cloudData.preventiveMaster || []));
                 localStorage.setItem('app_pm_logs', JSON.stringify(cloudData.preventiveLogs || []));
+                localStorage.setItem('app_audit_logs', JSON.stringify(cloudData.auditLogs || []));
                 localStorage.setItem('app_laporan_data', JSON.stringify(cloudData.laporan || []));
             } catch(e) {}
         }
@@ -2790,7 +2897,7 @@
             else if(id === 'tab-laporan-part') renderLaporanPartTable();
             else if(id === 'tab-laporan-downtime') renderLaporanDowntimeTable();
             else if(id === 'tab-datapp') { checkDataPPPermissions(); renderDataPPTable(); }
-            else if(id === 'tab-pengaturan') checkMasterAdminPermissions();
+            else if(id === 'tab-pengaturan') { checkMasterAdminPermissions(); renderAuditLogTable(); }
             else if(id === 'tab-perintah') {
                 checkPerintahAdminPermissions();
                 populateCmdPersonelDropdown();
@@ -3048,10 +3155,12 @@
 
             try {
                 if(editId) {
+                    recordAuditLog('DATA PP', 'EDIT', `Edit Data PP: "${item}" (${spec}) - Qty: ${qtyFull}, No.PP: ${noPP}, Status DONE: ${done || 'Belum'}`);
                     await sendDataToSheets({ action: 'dataPP', type: 'update', row: rowObj });
                     alert(`✅ Data PP berhasil diperbarui!${stockSyncMsg}`);
                     cancelEditPP();
                 } else {
+                    recordAuditLog('DATA PP', 'TAMBAH', `Tambah Data PP: "${item}" (${spec}) - Qty: ${qtyFull}, Mesin: ${machine}, No.PP: ${noPP}`);
                     await sendDataToSheets({ action: 'dataPP', type: 'add', row: rowObj });
                     alert(`✅ Data PP baru berhasil disimpan!${stockSyncMsg}`);
                     resetFormPP();
@@ -3119,7 +3228,11 @@
 
         async function hapusDataPP(id) {
             if(!isUserMasterAdmin()) { alert("Akses ditolak! Hanya Master Admin."); return; }
+            const delPPTarget = (cloudData.dataPP || []).find(x => String(x.id) === String(id));
             if(confirm("Hapus baris Data PP ini?")) {
+                if (delPPTarget) {
+                    recordAuditLog('DATA PP', 'HAPUS', `Hapus Data PP: "${delPPTarget.item}" (${delPPTarget.specification || '-'}) - No.PP: ${delPPTarget.noPP || '-'}`);
+                }
                 cloudData.dataPP = (cloudData.dataPP || []).filter(x => String(x.id) !== String(id));
                 saveLocalAppData();
                 renderDataPPTable();
@@ -3283,6 +3396,7 @@
                 renderPerintahTable();
 
                 try {
+                    recordAuditLog('PERINTAH', 'EDIT', `Edit Perintah Kerja untuk ${personel} [${mesin}]: ${equipment} - ${perintah}`);
                     await sendDataToSheets({ action: 'perintah', type: 'update', row: updatedCmd }).catch(() => {});
                     alert(`✅ Perintah pekerjaan berhasil diperbarui!`);
                     cancelEditPerintah();
@@ -3315,6 +3429,7 @@
             renderPerintahTable();
 
             try {
+                recordAuditLog('PERINTAH', 'TAMBAH', `Kirim Perintah Kerja ke ${personel} [${mesin}]: ${equipment} - ${perintah}`);
                 await sendDataToSheets({ action: 'perintah', type: 'add', row: newCmd });
                 alert(`✅ Perintah pekerjaan berhasil dikirim kepada ${personel}!`);
                 document.getElementById('cmd-equipment').value = "";
@@ -3446,7 +3561,11 @@
 
         async function hapusPerintahKerja(id) {
             if(!isUserMasterAdmin()) { alert("Akses Ditolak! Hanya Master Admin."); return; }
+            const delCmdTarget = (cloudData.perintahKerja || []).find(c => String(c.id) === String(id));
             if(confirm("Hapus daftar perintah pekerjaan ini?")) {
+                if (delCmdTarget) {
+                    recordAuditLog('PERINTAH', 'HAPUS', `Hapus Perintah Kerja (${delCmdTarget.personel} - ${delCmdTarget.mesin}): ${delCmdTarget.perintah}`);
+                }
                 cloudData.perintahKerja = cloudData.perintahKerja.filter(c => String(c.id) !== String(id));
                 saveLocalAppData();
                 renderPerintahTable();
@@ -3808,6 +3927,7 @@
                         await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
                     }
 
+                    recordAuditLog('LAPORAN', 'EDIT', `Edit Laporan [${selectedMesin} - ${formatTanggalIndo(tanggalInputManual)}]: Equip "${equipment}", Issue "${issue}", Part "${partText}"`);
                     alert(t('BERHASIL! Laporan berhasil diperbarui.', 'SUCCESS! Work report has been updated.'));
                     cancelEditMode();
                 } else {
@@ -3820,6 +3940,7 @@
                     saveLocalAppData();
 
                     await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
+                    recordAuditLog('LAPORAN', 'TAMBAH', `Input Laporan [${selectedMesin} - ${formatTanggalIndo(tanggalInputManual)}]: Equip "${equipment}", Issue "${issue}", Part "${partText}"`);
                     alert(t('BERHASIL! Laporan kerja tersimpan.', 'SUCCESS! Work report has been saved.'));
                 }
 
@@ -3958,10 +4079,13 @@
             if(editId) {
                 let target = (cloudData.sparepart || []).find(p => String(p.id) === String(editId));
                 if(target) {
+                    const oldParsed = parseSpekSatuanLokasi(target.spek);
+                    const oldSummary = `${target.name} (${oldParsed.cleanSpek}, Lokasi: ${oldParsed.lokasi}, Mesin: ${target.mesin}, Masuk: ${target.in})`;
                     target.name = nameVal;
                     target.spek = spekFull;
                     target.mesin = mesinVal;
                     target.in = qtyVal; // Update total masuk atau stok awal jika diubah master admin
+                    recordAuditLog('SPARE PART', 'EDIT', `Edit Part: ${oldSummary} -> ${nameVal} (${spekPure}, Lokasi: ${lokasiVal}, Mesin: ${mesinVal}, Masuk: ${qtyVal} ${satuanVal})`);
                     renderSparePartTable();
                     populatePartDropdown();
                     sendDataToSheets({ action: 'sparepart', type: 'update', row: target }).then(() => {
@@ -3980,6 +4104,7 @@
 
                 if (!cloudData.sparepart) cloudData.sparepart = [];
                 cloudData.sparepart.push(newItem);
+                recordAuditLog('SPARE PART', 'TAMBAH', `Tambah Part Baru: "${nameVal}" (Spek: ${spekPure}, Lokasi: ${lokasiVal}, Mesin: ${mesinVal}, Stok Awal: ${qtyVal} ${satuanVal})`);
                 renderSparePartTable();
                 populatePartDropdown();
 
@@ -4056,6 +4181,8 @@
                 promises.push(sendDataToSheets({ action: 'sparepart', type: 'update', row: targetPart }));
             }
 
+            const sisaBaruRestock = (parseInt(part.in) || 0) - (parseInt(part.out) || 0);
+            recordAuditLog('SPARE PART', 'TAMBAH STOK', `Tambah Stok (+${qtyMasuk} ${parsed.satuan}) untuk "${part.name}" (${parsed.cleanSpek}) | Sisa Stok Sekarang: ${sisaBaruRestock} ${parsed.satuan}`);
             renderSparePartTable();
             await Promise.all(promises);
             alert(`BERHASIL! Stok bertambah +${qtyMasuk} ${parsed.satuan}.`);
@@ -4093,6 +4220,8 @@
                 promises.push(sendDataToSheets({ action: 'sparepart', type: 'update', row: targetPart }));
             }
 
+            const sisaBaruReduce = (parseInt(part.in) || 0) - (parseInt(part.out) || 0);
+            recordAuditLog('SPARE PART', 'KURANGI STOK', `Kurangi Stok (-${qtyKurang} ${parsed.satuan}) untuk "${part.name}" (${parsed.cleanSpek}) | Sisa Stok Sekarang: ${sisaBaruReduce} ${parsed.satuan}`);
             renderSparePartTable();
             await Promise.all(promises);
             alert(`BERHASIL! Stok dikurangi -${qtyKurang} ${parsed.satuan}.`);
@@ -4161,7 +4290,7 @@
 
             let filteredList = sortedLaporan.filter(item => {
                 const ketTrim = String(item.ket || '').trim();
-                if (ketTrim.startsWith('[PM_MASTER_SYNC]') || ketTrim.startsWith('[PM_LOG_SYNC]') || ketTrim.includes('[PM_DONE:')) return false;
+                if (ketTrim.startsWith('[PM_MASTER_SYNC]') || ketTrim.startsWith('[PM_LOG_SYNC]') || ketTrim.startsWith('[AUDIT_LOG_SYNC]') || ketTrim.startsWith('[AUDIT_CLEAR_BEFORE]') || ketTrim.includes('[PM_DONE:')) return false;
                 if (String(item.shift || '').trim() === 'PM_LOG') return false;
                 if(mesinFilter !== 'ALL' && String(item.mesin || '').trim().toUpperCase() !== mesinFilter.toUpperCase()) return false;
 
@@ -4582,9 +4711,11 @@
 
             if(editIdx !== "") {
                 cloudData.karyawan[editIdx] = { nik, nama, hp, jabatan, pin };
+                recordAuditLog('KARYAWAN & SETTING', 'EDIT', `Edit Data & PIN Karyawan: ${nama} (NIK: ${nik || '-'}, Jabatan: ${jabatan || '-'})`);
                 alert(`Data karyawan "${nama}" berhasil diperbarui!`);
             } else {
                 cloudData.karyawan.push({ nik, nama, hp, jabatan, pin });
+                recordAuditLog('KARYAWAN & SETTING', 'TAMBAH', `Tambah Karyawan Baru: ${nama} (NIK: ${nik || '-'}, Jabatan: ${jabatan || '-'})`);
                 alert(`Karyawan baru "${nama}" berhasil ditambahkan!`);
             }
 
@@ -4627,6 +4758,7 @@
             let sourceList = (cloudData.karyawan && cloudData.karyawan.length > 0) ? cloudData.karyawan : fallbackKaryawan;
             let target = sourceList[index];
             if(confirm(`Hapus data karyawan "${target.nama}"?`)) {
+                recordAuditLog('KARYAWAN & SETTING', 'HAPUS', `Hapus Data Karyawan: ${target.nama} (NIK: ${target.nik || '-'})`);
                 cloudData.karyawan.splice(index, 1);
                 saveLocalAppData();
                 populateCmdPersonelDropdown();
@@ -5138,6 +5270,8 @@
 
                 cloudData.laporan = cloudData.laporan.filter(i => String(i.id) !== String(id));
                 renderAllViews();
+                const delKetClean = targetReport ? String(targetReport.ket || '').replace(/\[[^\]]+\]/g, '').trim() : '-';
+                recordAuditLog('LAPORAN', 'HAPUS', `Hapus Laporan [${targetReport ? targetReport.mesin : '-'} - ${targetReport ? formatTanggalIndo(targetReport.tanggal) : '-'}]: Pelapor ${targetReport ? targetReport.personel : '-'}, Part "${targetReport ? targetReport.partText : '-'}", Ket: ${delKetClean}`);
                 await sendDataToSheets({ action: 'laporan', type: 'delete', id: parseInt(id) });
                 fetchDataFromSheets();
                 alert('Laporan berhasil dihapus dan stok inventory telah dikembalikan!');
@@ -5146,7 +5280,12 @@
 
         async function hapusSparePart(id) {
             if(!isUserMasterAdmin()) { alert("Akses Ditolak! Hanya Master Admin."); return; }
+            const delPartTarget = (cloudData.sparepart || []).find(p => String(p.id) === String(id));
             if(confirm('Hapus item ini?')) {
+                if (delPartTarget) {
+                    const pInfo = parseSpekSatuanLokasi(delPartTarget.spek);
+                    recordAuditLog('SPARE PART', 'HAPUS', `Hapus Part dari Gudang: "${delPartTarget.name}" (${pInfo.cleanSpek}, Lokasi: ${pInfo.lokasi}, Mesin: ${delPartTarget.mesin || '-'}, Sisa Stok Terakhir: ${(parseInt(delPartTarget.in)||0)-(parseInt(delPartTarget.out)||0)} ${pInfo.satuan})`);
+                }
                 cloudData.sparepart = cloudData.sparepart.filter(p => String(p.id) !== String(id));
                 renderSparePartTable();
                 await sendDataToSheets({ action: 'sparepart', type: 'delete', id: parseInt(id) });
@@ -5306,6 +5445,7 @@
             renderPreventiveTable();
 
             try {
+                recordAuditLog('PREVENTIVE', editId ? 'EDIT' : 'TAMBAH', `${editId ? 'Edit' : 'Tambah'} Jadwal PM [${mesin} - ${siklus}]: ${equipment} - ${pekerjaan}`);
                 await sendDataToSheets({ action: 'preventiveMaster', type: editId ? 'update' : 'add', row: itemObj }).catch(() => {});
                 await sendDataToSheets({ action: 'laporan', type: editId ? 'update' : 'add', row: syncRecord }).catch(() => {});
                 if (siklus === "PEKERJAAN_TAMBAHAN") {
@@ -5383,6 +5523,7 @@
             saveLocalAppData();
             renderPreventiveTable();
 
+            recordAuditLog('PREVENTIVE', 'HAPUS', `Hapus Jadwal PM: ${target ? `${target.mesin} - ${target.equipment}: ${target.pekerjaan}` : id}`);
             await sendDataToSheets({ action: 'preventiveMaster', type: 'delete', id: parseInt(id, 10) || id }).catch(() => {});
             await sendDataToSheets({ action: 'laporan', type: 'add', row: syncRecord }).catch(() => {});
             alert("🗑️ Item pekerjaan berhasil dihapus.");
@@ -6072,7 +6213,223 @@
             setTimeout(() => applyLanguageDOM(currentLang), 50);
         });
 
+
+        /* ========================================================
+           SISTEM AUDIT LOG / RIWAYAT AKTIVITAS MASTER ADMIN
+           - Mencatat otomatis setiap aksi Edit, Hapus, Tambah & Kurangi Part
+           - Tersimpan di localStorage & sinkron lintas perangkat via Google Sheets
+           ======================================================== */
+        function recordAuditLog(kategori, aksi, detail) {
+            const logEntry = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                ts: Date.now(),
+                waktu: getWIBDateTimeString(),
+                pelaku: currentUser || "Master Admin",
+                kategori: kategori || "UMUM",
+                aksi: aksi || "EDIT",
+                detail: detail || "-"
+            };
+
+            if (!cloudData.auditLogs) cloudData.auditLogs = [];
+            cloudData.auditLogs.unshift(logEntry);
+            if (cloudData.auditLogs.length > 500) {
+                cloudData.auditLogs = cloudData.auditLogs.slice(0, 500);
+            }
+
+            const syncRecord = {
+                id: Number(logEntry.id) + 700000000000,
+                mesin: "AUDIT",
+                tanggal: "2000-01-01",
+                shift: "SYSTEM",
+                personel: logEntry.pelaku,
+                partText: "-",
+                jamMulai: "-",
+                jamSelesai: 0,
+                ket: `[AUDIT_LOG_SYNC] ${JSON.stringify(logEntry)}`
+            };
+            if (!cloudData.laporan) cloudData.laporan = [];
+            cloudData.laporan.push(syncRecord);
+
+            saveLocalAppData();
+            renderAuditLogTable();
+            if (document.getElementById('modal-audit-log')?.style.display === 'flex') {
+                renderModalAuditLogTable();
+            }
+
+            sendDataToSheets({ action: 'laporan', type: 'add', row: syncRecord }).catch(() => {});
+        }
+
+        function getCombinedAuditLogs() {
+            const map = new Map();
+            let clearBeforeTs = 0;
+
+            (cloudData.laporan || []).forEach(lap => {
+                const ket = String(lap.ket || "");
+                if (ket.startsWith("[AUDIT_CLEAR_BEFORE]")) {
+                    const tsVal = parseInt(ket.replace("[AUDIT_CLEAR_BEFORE]", "").trim(), 10);
+                    if (!isNaN(tsVal) && tsVal > clearBeforeTs) clearBeforeTs = tsVal;
+                }
+            });
+
+            (cloudData.auditLogs || []).forEach(item => {
+                if (item && item.id !== undefined) {
+                    const itemTs = Number(item.ts || item.id) || 0;
+                    if (itemTs > clearBeforeTs) map.set(String(item.id), item);
+                }
+            });
+
+            (cloudData.laporan || []).forEach(lap => {
+                const ket = String(lap.ket || "");
+                if (ket.startsWith("[AUDIT_LOG_SYNC]")) {
+                    try {
+                        const parsed = JSON.parse(ket.replace("[AUDIT_LOG_SYNC]", "").trim());
+                        if (parsed && parsed.id !== undefined) {
+                            const itemTs = Number(parsed.ts || parsed.id) || 0;
+                            if (itemTs > clearBeforeTs) map.set(String(parsed.id), parsed);
+                        }
+                    } catch (e) {}
+                }
+            });
+
+            return Array.from(map.values()).sort((a, b) => (Number(b.ts || b.id) || 0) - (Number(a.ts || a.id) || 0));
+        }
+
+        function getAuditBadgeHtml(aksi) {
+            const a = String(aksi || "").toUpperCase();
+            if (a === "HAPUS") {
+                return `<span style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold;">🗑️ HAPUS</span>`;
+            }
+            if (a === "KURANGI STOK") {
+                return `<span style="background:#ffedd5; color:#9a3412; border:1px solid #fed7aa; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold;">📤 KURANGI STOK</span>`;
+            }
+            if (a === "TAMBAH STOK") {
+                return `<span style="background:#cffafe; color:#155e75; border:1px solid #a5f3fc; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold;">📥 TAMBAH STOK</span>`;
+            }
+            if (a === "TAMBAH") {
+                return `<span style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold;">➕ TAMBAH</span>`;
+            }
+            return `<span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:bold;">✏️ EDIT</span>`;
+        }
+
+        function buildAuditRowsHtml(logs, kategoriFilter, aksiFilter, keyword) {
+            const kw = String(keyword || "").toLowerCase();
+            const filtered = logs.filter(item => {
+                if (kategoriFilter !== "ALL" && String(item.kategori || "").toUpperCase() !== kategoriFilter.toUpperCase()) return false;
+                if (aksiFilter !== "ALL" && String(item.aksi || "").toUpperCase() !== aksiFilter.toUpperCase()) return false;
+                const combined = `${item.waktu} ${item.pelaku} ${item.kategori} ${item.aksi} ${item.detail}`.toLowerCase();
+                return combined.includes(kw);
+            });
+
+            if (filtered.length === 0) {
+                return `<tr><td colspan="5" style="text-align:center; color:#777; padding:14px;">Belum ada catatan riwayat yang cocok.</td></tr>`;
+            }
+
+            return filtered.map(item => `
+                <tr>
+                    <td><strong>${escapeHtml(item.waktu || "-")}</strong></td>
+                    <td><span style="color:#003399; font-weight:bold;">👤 ${escapeHtml(item.pelaku || "-")}</span></td>
+                    <td><span style="background:#f1f5f9; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${escapeHtml(item.kategori || "-")}</span></td>
+                    <td>${getAuditBadgeHtml(item.aksi)}</td>
+                    <td style="font-size:12px; line-height:1.45;">${escapeHtml(item.detail || "-")}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderAuditLogTable() {
+            const tbody = document.getElementById('audit-log-table-body');
+            if (!tbody) return;
+            const kat = document.getElementById('filter-audit-kategori')?.value || "ALL";
+            const aksi = document.getElementById('filter-audit-aksi')?.value || "ALL";
+            const kw = document.getElementById('search-audit-log')?.value || "";
+            tbody.innerHTML = buildAuditRowsHtml(getCombinedAuditLogs(), kat, aksi, kw);
+        }
+
+        function bukaModalAuditLog(defaultKategori = "ALL") {
+            const modal = document.getElementById('modal-audit-log');
+            if (!modal) return;
+            const katSel = document.getElementById('modal-audit-kategori');
+            if (katSel) katSel.value = defaultKategori;
+            const aksiSel = document.getElementById('modal-audit-aksi');
+            if (aksiSel) aksiSel.value = "ALL";
+            const searchIn = document.getElementById('modal-audit-search');
+            if (searchIn) searchIn.value = "";
+            renderModalAuditLogTable();
+            modal.style.display = 'flex';
+        }
+
+        function tutupModalAuditLog() {
+            const modal = document.getElementById('modal-audit-log');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderModalAuditLogTable() {
+            const tbody = document.getElementById('modal-audit-table-body');
+            if (!tbody) return;
+            const kat = document.getElementById('modal-audit-kategori')?.value || "ALL";
+            const aksi = document.getElementById('modal-audit-aksi')?.value || "ALL";
+            const kw = document.getElementById('modal-audit-search')?.value || "";
+            tbody.innerHTML = buildAuditRowsHtml(getCombinedAuditLogs(), kat, aksi, kw);
+        }
+
+        async function bersihkanAuditLog() {
+            if (!isUserMasterAdmin()) { alert("Akses Ditolak! Hanya Master Admin."); return; }
+            if (!confirm("Bersihkan seluruh riwayat log aktivitas yang tampil saat ini?")) return;
+            const nowTs = Date.now();
+            cloudData.auditLogs = [];
+            const clearRecord = {
+                id: nowTs + 750000000000,
+                mesin: "AUDIT",
+                tanggal: "2000-01-01",
+                shift: "SYSTEM",
+                personel: currentUser || "Master Admin",
+                partText: "-",
+                jamMulai: "-",
+                jamSelesai: 0,
+                ket: `[AUDIT_CLEAR_BEFORE] ${nowTs}`
+            };
+            cloudData.laporan.push(clearRecord);
+            saveLocalAppData();
+            renderAuditLogTable();
+            await sendDataToSheets({ action: 'laporan', type: 'add', row: clearRecord }).catch(() => {});
+            alert("🗑️ Riwayat log aktivitas berhasil dibersihkan.");
+        }
+
+        function exportAuditLogExcel() {
+            const logs = getCombinedAuditLogs();
+            if (!logs.length) { alert("Tidak ada data riwayat aktivitas untuk diekspor."); return; }
+            const rows = logs.map((l, idx) => [idx + 1, l.waktu || '-', l.pelaku || '-', l.kategori || '-', l.aksi || '-', l.detail || '-']);
+            generateStyledExcel({
+                title: 'RIWAYAT AKTIVITAS / AUDIT LOG MASTER ADMIN',
+                subtitle: `Dicetak Oleh: ${currentUser || 'Admin'}`,
+                sheetName: 'Audit Log Admin',
+                headers: ['No', 'Waktu (WIB)', 'Pelaku / Admin', 'Kategori', 'Jenis Aksi', 'Detail Perubahan'],
+                rows: rows,
+                colWidths: [6, 18, 18, 18, 16, 55],
+                rowStyler: (rowData) => {
+                    const ak = String(rowData[4] || '').toUpperCase();
+                    if (ak === 'HAPUS') return { bg: 'FFF8D7DA', color: 'FF721C24', bold: true };
+                    if (ak === 'KURANGI STOK') return { bg: 'FFFFEDD5', color: 'FF9A3412' };
+                    if (ak === 'TAMBAH STOK' || ak === 'TAMBAH') return { bg: 'FFD4EDDA', color: 'FF155724' };
+                    if (ak === 'EDIT') return { bg: 'FFFFF3CD', color: 'FF856404' };
+                    return null;
+                },
+                filename: `Riwayat_Aktivitas_Admin_${getWIBDateString()}.xlsx`
+            });
+        }
+
+        function cetakPDFAuditLog() {
+            const logs = getCombinedAuditLogs();
+            if (!logs.length) { alert("Tidak ada data riwayat aktivitas untuk dicetak."); return; }
+            const rows = logs.map((l, idx) => [idx + 1, l.waktu || '-', l.pelaku || '-', l.kategori || '-', l.aksi || '-', l.detail || '-']);
+            generateTablePdf({
+                title: 'RIWAYAT AKTIVITAS / AUDIT LOG MASTER ADMIN',
+                periodeText: `Dicetak Per Tanggal: ${formatTanggalIndo(getWIBDateString())} WIB`,
+                headers: ['No', 'Waktu (WIB)', 'Pelaku / Admin', 'Kategori', 'Jenis Aksi', 'Detail Perubahan'],
+                rows: rows,
+                filename: `Riwayat_Aktivitas_Admin_${getWIBDateString()}.pdf`
+            });
+        }
+
     </script>
 </body>
 </html>
-Processed and analyzed in code
