@@ -3020,7 +3020,8 @@
 
             let prevRecord = null;
             if(editId) {
-                prevRecord = cloudData.dataPP.find(x => String(x.id) === String(editId)) || null;
+                const foundPP = cloudData.dataPP.find(x => String(x.id) === String(editId));
+                prevRecord = foundPP ? Object.assign({}, foundPP) : null;
             }
 
             let isNewDone = (String(done).trim().toUpperCase() === "DONE");
@@ -3155,7 +3156,22 @@
 
             try {
                 if(editId) {
-                    recordAuditLog('DATA PP', 'EDIT', `Edit Data PP: "${item}" (${spec}) - Qty: ${qtyFull}, No.PP: ${noPP}, Status DONE: ${done || 'Belum'}`);
+                    const diffPP = buildDiffSummary(prevRecord, rowObj, {
+                        item: "Item",
+                        specification: "Spesifikasi",
+                        qty: "Qty",
+                        description: "Deskripsi",
+                        machine: "Mesin",
+                        priority: "Prioritas",
+                        datePP: "Tgl PP",
+                        noPP: "No. PP",
+                        purc: "PURC",
+                        po: "PO",
+                        mrr: "MRR",
+                        done: "Status DONE",
+                        remark: "Remark"
+                    });
+                    recordAuditLog('DATA PP', 'EDIT', `Edit Data PP "${item}" (No.PP: ${noPP}) | ${diffPP}`);
                     await sendDataToSheets({ action: 'dataPP', type: 'update', row: rowObj });
                     alert(`✅ Data PP berhasil diperbarui!${stockSyncMsg}`);
                     cancelEditPP();
@@ -3376,7 +3392,7 @@
 
             if(editId) {
                 const idx = cloudData.perintahKerja.findIndex(c => String(c.id) === String(editId));
-                const existingCmd = idx !== -1 ? cloudData.perintahKerja[idx] : {};
+                const existingCmd = idx !== -1 ? Object.assign({}, cloudData.perintahKerja[idx]) : {};
                 const updatedCmd = {
                     ...existingCmd,
                     id: existingCmd.id || (parseInt(editId, 10) || editId),
@@ -3396,7 +3412,14 @@
                 renderPerintahTable();
 
                 try {
-                    recordAuditLog('PERINTAH', 'EDIT', `Edit Perintah Kerja untuk ${personel} [${mesin}]: ${equipment} - ${perintah}`);
+                    const diffCmd = buildDiffSummary(existingCmd, updatedCmd, {
+                        personel: "Personel",
+                        mesin: "Mesin",
+                        equipment: "Equipment",
+                        issue: "Issue",
+                        perintah: "Perintah"
+                    });
+                    recordAuditLog('PERINTAH', 'EDIT', `Edit Perintah Kerja [${mesin} - ${personel}] | ${diffCmd}`);
                     await sendDataToSheets({ action: 'perintah', type: 'update', row: updatedCmd }).catch(() => {});
                     alert(`✅ Perintah pekerjaan berhasil diperbarui!`);
                     cancelEditPerintah();
@@ -3895,6 +3918,7 @@
                 }
 
                 if(editId) {
+                    const prevLapItem = (cloudData.laporan || []).find(i => String(i.id) === String(editId)) || null;
                     const oldIdNum = parseInt(editId, 10);
                     const oldIdStr = String(editId);
                     const newIdStr = String(laporanData.id);
@@ -3927,7 +3951,17 @@
                         await sendDataToSheets({ action: 'laporan', type: 'add', row: laporanData });
                     }
 
-                    recordAuditLog('LAPORAN', 'EDIT', `Edit Laporan [${selectedMesin} - ${formatTanggalIndo(tanggalInputManual)}]: Equip "${equipment}", Issue "${issue}", Part "${partText}"`);
+                    const diffLap = buildDiffSummary(prevLapItem, laporanData, {
+                        mesin: "Mesin",
+                        tanggal: "Tanggal",
+                        shift: "Shift",
+                        personel: "Personel",
+                        partText: "Spare Part",
+                        jamMulai: "Waktu Downtime",
+                        jamSelesai: "Durasi (Menit)",
+                        ket: "Keterangan"
+                    });
+                    recordAuditLog('LAPORAN', 'EDIT', `Edit Laporan [${selectedMesin} - ${formatTanggalIndo(tanggalInputManual)}] | ${diffLap}`);
                     alert(t('BERHASIL! Laporan berhasil diperbarui.', 'SUCCESS! Work report has been updated.'));
                     cancelEditMode();
                 } else {
@@ -4085,7 +4119,7 @@
                     target.spek = spekFull;
                     target.mesin = mesinVal;
                     target.in = qtyVal; // Update total masuk atau stok awal jika diubah master admin
-                    recordAuditLog('SPARE PART', 'EDIT', `Edit Part: ${oldSummary} -> ${nameVal} (${spekPure}, Lokasi: ${lokasiVal}, Mesin: ${mesinVal}, Masuk: ${qtyVal} ${satuanVal})`);
+                    recordAuditLog('SPARE PART', 'EDIT', `Edit Part | Sebelum: ${oldSummary} -> Sesudah: ${nameVal} (${spekPure}, Lokasi: ${lokasiVal}, Mesin: ${mesinVal}, Masuk: ${qtyVal} ${satuanVal})`);
                     renderSparePartTable();
                     populatePartDropdown();
                     sendDataToSheets({ action: 'sparepart', type: 'update', row: target }).then(() => {
@@ -4710,8 +4744,17 @@
             if (!cloudData.karyawan) cloudData.karyawan = [];
 
             if(editIdx !== "") {
-                cloudData.karyawan[editIdx] = { nik, nama, hp, jabatan, pin };
-                recordAuditLog('KARYAWAN & SETTING', 'EDIT', `Edit Data & PIN Karyawan: ${nama} (NIK: ${nik || '-'}, Jabatan: ${jabatan || '-'})`);
+                const prevKar = Object.assign({}, cloudData.karyawan[editIdx] || {});
+                const nextKar = { nik, nama, hp, jabatan, pin };
+                cloudData.karyawan[editIdx] = nextKar;
+                const diffKar = buildDiffSummary(prevKar, nextKar, {
+                    nik: "NIK",
+                    nama: "Nama",
+                    hp: "No. HP",
+                    jabatan: "Jabatan",
+                    pin: "PIN"
+                });
+                recordAuditLog('KARYAWAN & SETTING', 'EDIT', `Edit Data & PIN Karyawan "${nama}" | ${diffKar}`);
                 alert(`Data karyawan "${nama}" berhasil diperbarui!`);
             } else {
                 cloudData.karyawan.push({ nik, nama, hp, jabatan, pin });
@@ -5445,7 +5488,18 @@
             renderPreventiveTable();
 
             try {
-                recordAuditLog('PREVENTIVE', editId ? 'EDIT' : 'TAMBAH', `${editId ? 'Edit' : 'Tambah'} Jadwal PM [${mesin} - ${siklus}]: ${equipment} - ${pekerjaan}`);
+                if (editId && existingTarget) {
+                    const diffPM = buildDiffSummary(existingTarget, itemObj, {
+                        mesin: "Mesin",
+                        siklus: "Siklus",
+                        equipment: "Equipment",
+                        pekerjaan: "Pekerjaan",
+                        standar: "Standar"
+                    });
+                    recordAuditLog('PREVENTIVE', 'EDIT', `Edit Jadwal PM [${mesin}] | ${diffPM}`);
+                } else {
+                    recordAuditLog('PREVENTIVE', 'TAMBAH', `Tambah Jadwal PM [${mesin} - ${siklus}]: ${equipment} - ${pekerjaan}`);
+                }
                 await sendDataToSheets({ action: 'preventiveMaster', type: editId ? 'update' : 'add', row: itemObj }).catch(() => {});
                 await sendDataToSheets({ action: 'laporan', type: editId ? 'update' : 'add', row: syncRecord }).catch(() => {});
                 if (siklus === "PEKERJAAN_TAMBAHAN") {
@@ -6897,6 +6951,19 @@
            - Mencatat otomatis setiap aksi Edit, Hapus, Tambah & Kurangi Part
            - Tersimpan di localStorage & sinkron lintas perangkat via Google Sheets
            ======================================================== */
+        function buildDiffSummary(oldObj, newObj, fieldLabels) {
+            if (!oldObj || !newObj) return "";
+            const changes = [];
+            Object.keys(fieldLabels).forEach((key) => {
+                const beforeVal = String(oldObj[key] ?? "-").trim();
+                const afterVal = String(newObj[key] ?? "-").trim();
+                if (beforeVal !== afterVal) {
+                    changes.push(`${fieldLabels[key]}: "${beforeVal || "-"}" -> "${afterVal || "-"}"`);
+                }
+            });
+            return changes.length > 0 ? changes.join(" | ") : "Tidak ada perubahan nilai field";
+        }
+
         function recordAuditLog(kategori, aksi, detail) {
             if (!isUserMasterAdmin()) return;
             const logEntry = {
@@ -7184,4 +7251,4 @@
 </script>
 </body>
 </html>
-Processed and analyzed in code
+Analyzing
