@@ -5847,22 +5847,39 @@
         }
 
         /* ========================================================
-           SISTEM DWI-BAHASA (INDONESIA / ENGLISH - IN/ENG)
+           SISTEM DWI-BAHASA LENGKAP (INDONESIA / ENGLISH - IN/ENG)
+           - Menerjemahkan UI statis, atribut/placeholder, modal,
+             tabel dinamis, badge status, notifikasi & laporan ekspor
            ======================================================== */
         let currentLang = localStorage.getItem('app_language') || 'id';
 
         const i18nDict = {
             id: {
-                // Login
+                "Sistem Manajemen Operasional & Inventory": "Sistem Manajemen Operasional & Inventory",
+                "✅ Konfirmasi Selesai Preventive Maintenance": "✅ Konfirmasi Selesai Preventive Maintenance",
+                "Tanggal Pelaksanaan": "Tanggal Pelaksanaan",
+                "Nama Teknisi / Pelaksana": "Nama Teknisi / Pelaksana",
+                "Hasil Pengecekan / Tindakan PM": "Hasil Pengecekan / Tindakan PM",
+                "*Wajib": "*Wajib",
+                "ℹ️ Tercatat khusus di": "ℹ️ Tercatat khusus di",
+                "Preventive Maintenance": "Preventive Maintenance",
+                "untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).": "untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).",
+                "Batal": "Batal",
+                "✔️ Simpan & Tandai Selesai": "✔️ Simpan & Tandai Selesai",
+                "🇮🇩 IN": "🇮🇩 IN",
+                "🇬🇧 ENG": "🇬🇧 ENG",
+                "SISTEM OPERASIONAL": "SISTEM OPERASIONAL",
+                "MANAJEMEN PERBAIKAN": "MANAJEMEN PERBAIKAN",
                 "Nama Depan / Nama Karyawan": "Nama Depan / Nama Karyawan",
                 "Masukkan Nama Depan...": "Masukkan Nama Depan...",
+                "PIN Keamanan": "PIN Keamanan",
                 "VERIFIKASI & MASUK": "VERIFIKASI & MASUK",
-                "Keluar": "Keluar",
-
-                // Sidebar Defaults
+                "PASANG APLIKASI DI HP / DESKTOP": "PASANG APLIKASI DI HP / DESKTOP",
+                "IN": "IN",
+                "ENG": "ENG",
+                "🟢 LIVE": "🟢 LIVE",
                 "LAPORAN HARIAN": "LAPORAN HARIAN",
                 "PERINTAH PEKERJAAN": "PERINTAH PEKERJAAN",
-                "PREVENTIVE MAINTENANCE": "PREVENTIVE MAINTENANCE",
                 "HISTORI & DOWNTIME": "HISTORI & DOWNTIME",
                 "LAPORAN SPARE PART": "LAPORAN SPARE PART",
                 "LAPORAN DOWNTIME": "LAPORAN DOWNTIME",
@@ -5872,9 +5889,13 @@
                 "DATA KARYAWAN & PIN": "DATA KARYAWAN & PIN",
                 "PENGATURAN MASTER ADMIN": "PENGATURAN MASTER ADMIN",
                 "PASANG APLIKASI": "PASANG APLIKASI",
-                "PASANG APLIKASI DI HP / DESKTOP": "PASANG APLIKASI DI HP / DESKTOP",
-
-                // Tab 1: Laporan Harian
+                "APP": "APP",
+                "🚨 PERHATIAN! ADA": "🚨 PERHATIAN! ADA",
+                "PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨": "PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨",
+                "SISTEM OPERASIONAL & INVENTORY": "SISTEM OPERASIONAL & INVENTORY",
+                "🟢 LIVE SYNC": "🟢 LIVE SYNC",
+                "Dashboard Monitoring & Laporan Kerja": "Dashboard Monitoring & Laporan Kerja",
+                "Keluar": "Keluar",
                 "Form Input Laporan Kerja & Downtime Mesin": "Form Input Laporan Kerja & Downtime Mesin",
                 "Edit Laporan Kerja & Downtime Mesin": "Edit Laporan Kerja & Downtime Mesin",
                 "Pilih Unit Mesin": "Pilih Unit Mesin",
@@ -5884,6 +5905,10 @@
                 "🔍 Pengecekan / Kontrol": "🔍 Pengecekan / Kontrol",
                 "🔄 Pekerjaan Rutin / Preventive": "🔄 Pekerjaan Rutin / Preventive",
                 "Shift Kerja": "Shift Kerja",
+                "Shift 1": "Shift 1",
+                "Shift 2": "Shift 2",
+                "Shift 3": "Shift 3",
+                "Non shift/NS": "Non shift/NS",
                 "Personel / Pelapor": "Personel / Pelapor",
                 "Nama Teknis / Pelapor...": "Nama Teknis / Pelapor...",
                 "Equipment (Komponen Mesin)": "Equipment (Komponen Mesin)",
@@ -5911,23 +5936,86 @@
                 "SIMPAN LAPORAN": "SIMPAN LAPORAN",
                 "PERBARUI LAPORAN": "PERBARUI LAPORAN",
                 "BATALKAN EDIT": "BATALKAN EDIT",
-
-                // Tab 2: Perintah Pekerjaan
                 "🚨 Instruksi & Perintah Pekerjaan dari Master Admin": "🚨 Instruksi & Perintah Pekerjaan dari Master Admin",
+                "PDF": "PDF",
+                "Excel": "Excel",
                 "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)": "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)",
                 "Ditujukan Kepada Personel": "Ditujukan Kepada Personel",
                 "Unit Mesin": "Unit Mesin",
+                "Misal: Conveyor, Motor, Pompa...": "Misal: Conveyor, Motor, Pompa...",
                 "Issue / Masalah Ditemukan": "Issue / Masalah Ditemukan",
+                "Misal: Suara kasar, Oli bocor, Sensor error...": "Misal: Suara kasar, Oli bocor, Sensor error...",
                 "Detail Perintah Pekerjaan": "Detail Perintah Pekerjaan",
+                "Tuliskan instruksi pekerjaan yang harus segera dilakukan personel...": "Tuliskan instruksi pekerjaan yang harus segera dilakukan personel...",
                 "📢 KIRIM PERINTAH PEKERJAAN": "📢 KIRIM PERINTAH PEKERJAAN",
+                "💾 SIMPAN PERUBAHAN PERINTAH": "💾 SIMPAN PERUBAHAN PERINTAH",
+                "Batal Edit": "Batal Edit",
+                "\"✔️ Dikerjakan & Isi Keterangan\"": "\"✔️ Dikerjakan & Isi Keterangan\"",
+                "untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.": "untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.",
+                "⚙️ Unit Mesin:": "⚙️ Unit Mesin:",
+                "Semua Mesin": "Semua Mesin",
+                "📅 Tanggal:": "📅 Tanggal:",
+                "Reset Filter": "Reset Filter",
+                "🔍 Cari personel, equipment, issue, perintah...": "🔍 Cari personel, equipment, issue, perintah...",
                 "Tanggal & Pemberi": "Tanggal & Pemberi",
                 "Personel Tujuan": "Personel Tujuan",
                 "Mesin & Equipment": "Mesin & Equipment",
                 "Issue & Perintah Pekerjaan": "Issue & Perintah Pekerjaan",
                 "Status & Keterangan Personel": "Status & Keterangan Personel",
                 "Aksi / Konfirmasi": "Aksi / Konfirmasi",
-
-                // Tab 3: Histori & Downtime
+                "Memuat daftar perintah pekerjaan...": "Memuat daftar perintah pekerjaan...",
+                "🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)": "🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)",
+                "📅 Periode Aktif Saat Ini:": "📅 Periode Aktif Saat Ini:",
+                "Memuat Periode...": "Memuat Periode...",
+                "♻️ Daftar master pekerjaan cukup diinput 1x — status otomatis reset setiap pergantian bulan!": "♻️ Daftar master pekerjaan cukup diinput 1x — status otomatis reset setiap pergantian bulan!",
+                "Januari (Ganjil)": "Januari (Ganjil)",
+                "Februari (Genap)": "Februari (Genap)",
+                "Maret (Ganjil)": "Maret (Ganjil)",
+                "April (Genap)": "April (Genap)",
+                "Mei (Ganjil)": "Mei (Ganjil)",
+                "Juni (Genap)": "Juni (Genap)",
+                "Juli (Ganjil)": "Juli (Ganjil)",
+                "Agustus (Genap)": "Agustus (Genap)",
+                "September (Ganjil)": "September (Ganjil)",
+                "Oktober (Genap)": "Oktober (Genap)",
+                "November (Ganjil)": "November (Ganjil)",
+                "Desember (Genap)": "Desember (Genap)",
+                "Total Item PM Bulan Ini": "Total Item PM Bulan Ini",
+                "Sudah Selesai (Done)": "Sudah Selesai (Done)",
+                "Belum Dikerjakan": "Belum Dikerjakan",
+                "Progres Bulan Ini": "Progres Bulan Ini",
+                "➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)": "➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)",
+                "Siklus Jadwal Bulan": "Siklus Jadwal Bulan",
+                "🔴 BULAN GANJIL (Jan, Mar, Mei, Jul, Sep, Nov)": "🔴 BULAN GANJIL (Jan, Mar, Mei, Jul, Sep, Nov)",
+                "🔵 BULAN GENAP (Feb, Apr, Jun, Agu, Okt, Des)": "🔵 BULAN GENAP (Feb, Apr, Jun, Agu, Okt, Des)",
+                "🟢 SETIAP BULAN (Ganjil & Genap)": "🟢 SETIAP BULAN (Ganjil & Genap)",
+                "🟡 PEKERJAAN TAMBAHAN (Insidental / Sekali Bulan)": "🟡 PEKERJAAN TAMBAHAN (Insidental / Sekali Bulan)",
+                "Equipment / Bagian Mesin": "Equipment / Bagian Mesin",
+                "Misal: Hydraulic Pump, Gearbox, Bearing...": "Misal: Hydraulic Pump, Gearbox, Bearing...",
+                "Item Pekerjaan / Checklist PM": "Item Pekerjaan / Checklist PM",
+                "Misal: Ganti oli hidrolik, Greasing bearing, Cek kekencangan baut...": "Misal: Ganti oli hidrolik, Greasing bearing, Cek kekencangan baut...",
+                "Standar / Target Pemeriksaan (Opsional)": "Standar / Target Pemeriksaan (Opsional)",
+                "Misal: Level oli full, Tidak ada kebocoran, Suhu < 60°C...": "Misal: Level oli full, Tidak ada kebocoran, Suhu < 60°C...",
+                "💾 SIMPAN ITEM PREVENTIVE": "💾 SIMPAN ITEM PREVENTIVE",
+                "ℹ️ Anda masuk sebagai Operator/Personel. Di menu Preventive Maintenance Anda hanya dapat mengerjakan checklist (": "ℹ️ Anda masuk sebagai Operator/Personel. Di menu Preventive Maintenance Anda hanya dapat mengerjakan checklist (",
+                "); tambah, edit, hapus, atau reset master jadwal khusus Master Admin.": "); tambah, edit, hapus, atau reset master jadwal khusus Master Admin.",
+                "Filter Siklus:": "Filter Siklus:",
+                "📌 Jadwal Aktif Bulan Terpilih (Otomatis)": "📌 Jadwal Aktif Bulan Terpilih (Otomatis)",
+                "📋 Semua Master Jadwal (Ganjil + Genap + Tambahan)": "📋 Semua Master Jadwal (Ganjil + Genap + Tambahan)",
+                "🔴 Hanya Bulan Ganjil": "🔴 Hanya Bulan Ganjil",
+                "🔵 Hanya Bulan Genap": "🔵 Hanya Bulan Genap",
+                "🟢 Hanya Setiap Bulan": "🟢 Hanya Setiap Bulan",
+                "🟡 Hanya Pekerjaan Tambahan": "🟡 Hanya Pekerjaan Tambahan",
+                "Unit Mesin:": "Unit Mesin:",
+                "🔍 Cari mesin, equipment, item pekerjaan PM...": "🔍 Cari mesin, equipment, item pekerjaan PM...",
+                "No": "No",
+                "Siklus Bulan": "Siklus Bulan",
+                "Equipment": "Equipment",
+                "Item Pekerjaan PM & Standar": "Item Pekerjaan PM & Standar",
+                "Status Bulan Ini": "Status Bulan Ini",
+                "Pelaksana & Keterangan": "Pelaksana & Keterangan",
+                "Aksi / Checklist": "Aksi / Checklist",
+                "Memuat jadwal Preventive Maintenance...": "Memuat jadwal Preventive Maintenance...",
                 "📅 Periode Bulan:": "📅 Periode Bulan:",
                 "Semua Bulan": "Semua Bulan",
                 "Januari": "Januari", "Februari": "Februari", "Maret": "Maret", "April": "April",
@@ -5935,24 +6023,25 @@
                 "September": "September", "Oktober": "Oktober", "November": "November", "Desember": "Desember",
                 "Rentang Tgl:": "Rentang Tgl:",
                 "s/d": "s/d",
-                "Unit Mesin:": "Unit Mesin:",
+                "Reset": "Reset",
                 "Semua Mesin": "Semua Mesin",
                 "Filter Jenis:": "Filter Jenis:",
                 "Semua Jenis": "Semua Jenis",
                 "🔄 Pekerjaan Rutin": "🔄 Pekerjaan Rutin",
                 "Akumulasi Total Downtime Bulanan Per Mesin": "Akumulasi Total Downtime Bulanan Per Mesin",
                 "Histori Kerusakan & Perbaikan": "Histori Kerusakan & Perbaikan",
+                "Riwayat Admin": "Riwayat Admin",
                 "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...": "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...",
                 "Tanggal & Shift": "Tanggal & Shift",
                 "Mesin": "Mesin",
+                "Equipment / Issue": "Equipment / Issue",
                 "Personel": "Personel",
                 "Spare Part & Qty": "Spare Part & Qty",
                 "Jam / Waktu Downtime": "Jam / Waktu Downtime",
                 "Durasi Downtime": "Durasi Downtime",
                 "Keterangan": "Keterangan",
                 "Aksi": "Aksi",
-
-                // Tab Laporan Sparepart & Downtime
+                "Memuat data...": "Memuat data...",
                 "📦 Rekapitulasi Pemakaian Spare Part": "📦 Rekapitulasi Pemakaian Spare Part",
                 "🔍 Cari nama part, mesin, personel...": "🔍 Cari nama part, mesin, personel...",
                 "Spare Part & Qty Terpakai": "Spare Part & Qty Terpakai",
@@ -5960,54 +6049,227 @@
                 "🔍 Cari mesin, equipment, issue...": "🔍 Cari mesin, equipment, issue...",
                 "Spare Part Terpakai": "Spare Part Terpakai",
                 "Waktu Downtime": "Waktu Downtime",
-
-                // Tab Inventory Sparepart
                 "Inventory Spare Part Gudang": "Inventory Spare Part Gudang",
+                "Riwayat Edit & Stok": "Riwayat Edit & Stok",
                 "➕ Tambah / Edit Spare Part (Master Admin)": "➕ Tambah / Edit Spare Part (Master Admin)",
                 "Nama Item": "Nama Item",
+                "Nama item...": "Nama item...",
                 "Spesifikasi / Type": "Spesifikasi / Type",
+                "Spesifikasi...": "Spesifikasi...",
                 "Lokasi Part": "Lokasi Part",
+                "Rak A-1...": "Rak A-1...",
                 "Satuan": "Satuan",
                 "Stok Awal": "Stok Awal",
+                "Total Masuk (Stok)": "Total Masuk (Stok)",
+                "Nama Mesin...": "Nama Mesin...",
                 "Simpan": "Simpan",
                 "Batal Edit": "Batal Edit",
+                "ℹ️ Anda masuk sebagai Pengguna Biasa. Penambahan & Perubahan stok spare part hanya dapat dilakukan oleh Master Admin.": "ℹ️ Anda masuk sebagai Pengguna Biasa. Penambahan & Perubahan stok spare part hanya dapat dilakukan oleh Master Admin.",
+                "Total Item Terdaftar": "Total Item Terdaftar",
+                "Stok Aman (> 2)": "Stok Aman (> 2)",
+                "Stok Limit (1 - 2)": "Stok Limit (1 - 2)",
+                "Stok Habis (0)": "Stok Habis (0)",
                 "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...": "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...",
                 "Total Masuk & Riwayat": "Total Masuk & Riwayat",
                 "Stok Keluar": "Stok Keluar",
                 "Sisa Stok": "Sisa Stok",
                 "Tanggal Input & Keluar": "Tanggal Input & Keluar",
-
-                // Tab Data PP
                 "📋 Monitoring Data PP (Purchase Requisition)": "📋 Monitoring Data PP (Purchase Requisition)",
                 "➕ Input / Edit Data PP (Master Admin)": "➕ Input / Edit Data PP (Master Admin)",
+                "ITEM": "ITEM",
+                "Nama Item / Barang...": "Nama Item / Barang...",
+                "SPECIFICATION": "SPECIFICATION",
+                "Spesifikasi / Type / Ukuran...": "Spesifikasi / Type / Ukuran...",
+                "QTY & SATUAN": "QTY & SATUAN",
+                "DESCRIPTION": "DESCRIPTION",
+                "Untuk kebutuhan / bagian...": "Untuk kebutuhan / bagian...",
+                "MACHINE": "MACHINE",
+                "PRIORITY": "PRIORITY",
+                "Critical": "Critical",
+                "Normal": "Normal",
+                "Urgent": "Urgent",
+                "DATE PP": "DATE PP",
+                "NO. PP": "NO. PP",
+                "Contoh: 021/MTC/III/2026": "Contoh: 021/MTC/III/2026",
+                "PURC (Purchasing)": "PURC (Purchasing)",
+                "Belum": "Belum",
+                "Sudah": "Sudah",
+                "PO (No. PO)": "PO (No. PO)",
+                "Kosongkan jika belum PO...": "Kosongkan jika belum PO...",
+                "MRR": "MRR",
+                "No/Tgl MRR jika barang datang...": "No/Tgl MRR jika barang datang...",
+                "DONE (Otomatis Tambah Stok Inventory Jika DONE)": "DONE (Otomatis Tambah Stok Inventory Jika DONE)",
+                "Belum Selesai": "Belum Selesai",
+                "DONE (Barang Datang / Otomatis Masuk Inventory)": "DONE (Barang Datang / Otomatis Masuk Inventory)",
+                "REMARK": "REMARK",
+                "Catatan / Keterangan tambahan...": "Catatan / Keterangan tambahan...",
+                "💾 SIMPAN DATA PP": "💾 SIMPAN DATA PP",
+                "ℹ️ Anda masuk sebagai Pengguna Biasa. Penginputan & Perubahan Data PP hanya dapat dilakukan oleh Master Admin.": "ℹ️ Anda masuk sebagai Pengguna Biasa. Penginputan & Perubahan Data PP hanya dapat dilakukan oleh Master Admin.",
                 "Filter Status PP:": "Filter Status PP:",
                 "Semua Data PP": "Semua Data PP",
                 "⏳ Belum PO / Proses (Merah)": "⏳ Belum PO / Proses (Merah)",
                 "🟡 Sudah PO / Menunggu Barang (Kuning)": "🟡 Sudah PO / Menunggu Barang (Kuning)",
                 "🟢 Selesai / DONE (Hijau)": "🟢 Selesai / DONE (Hijau)",
-
-                // Tab Grafik & Karyawan & Pengaturan
+                "🔍 Cari Item, Spesifikasi, Mesin, No. PP, PO, Remark...": "🔍 Cari Item, Spesifikasi, Mesin, No. PP, PO, Remark...",
+                "QTY": "QTY",
+                "Machine": "Machine",
+                "Priority": "Priority",
+                "PURC": "PURC",
+                "PO": "PO",
+                "DONE": "DONE",
+                "Memuat data PP...": "Memuat data PP...",
                 "📈 Grafik Tren & Durasi Downtime": "📈 Grafik Tren & Durasi Downtime",
                 "Grafik durasi jam per bulan untuk setiap unit mesin.": "Grafik durasi jam per bulan untuk setiap unit mesin.",
                 "Daftar Personel & Kelola PIN Akses": "Daftar Personel & Kelola PIN Akses",
+                "➕ Tambah Karyawan Baru & Set PIN Akses (Master Admin)": "➕ Tambah Karyawan Baru & Set PIN Akses",
+                "NIK / ID": "NIK / ID",
+                "NIK...": "NIK...",
                 "Nama Lengkap": "Nama Lengkap",
+                "Nama...": "Nama...",
                 "No. Telepon": "No. Telepon",
+                "08...": "08...",
                 "Jabatan": "Jabatan",
+                "Jabatan...": "Jabatan...",
+                "PIN Keamanan Login": "PIN Keamanan Login",
+                "Ketik PIN...": "Ketik PIN...",
+                "🔒 Pengelolaan Data Karyawan & PIN dikunci oleh Master Admin. Hanya Master Admin yang dapat melakukan perubahan.": "🔒 Pengelolaan Data Karyawan & PIN dikunci oleh Master Admin. Hanya Master Admin yang dapat melakukan perubahan.",
+                "🔍 Cari NIK, nama karyawan, nomor telepon...": "🔍 Cari NIK, nama karyawan, nomor telepon...",
+                "NIK": "NIK",
                 "Status Keamanan PIN": "Status Keamanan PIN",
                 "⚙️ Pengaturan Master Admin & Kelola Master Data": "⚙️ Pengaturan Master Admin & Kelola Master Data",
-                "Sistem Operasional & Inventory Terintegrasi": "Sistem Operasional & Inventory Terintegrasi"
+                "⛔ Anda masuk sebagai pengguna biasa (Bukan Master Admin). Menu pengaturan ini dikunci dari perubahan.": "⛔ Anda masuk sebagai pengguna biasa (Bukan Master Admin). Menu pengaturan ini dikunci dari perubahan.",
+                "🛠️ 1. Kelola Master Daftar Mesin & Satuan (Khusus Master Admin)": "🛠️ 1. Kelola Master Daftar Mesin & Satuan (Khusus Master Admin)",
+                "Daftar Unit Mesin Operasional": "Daftar Unit Mesin Operasional",
+                "Nama Mesin Baru...": "Nama Mesin Baru...",
+                "➕ Tambah": "➕ Tambah",
+                "Daftar Satuan Part / Material": "Daftar Satuan Part / Material",
+                "Satuan Baru...": "Satuan Baru...",
+                "2. Kustomisasi Judul Header & Sub-Judul": "2. Kustomisasi Judul Header & Sub-Judul",
+                "Judul Utama Header & Sistem (Atas & Sidebar)": "Judul Utama Header & Sistem (Atas & Sidebar)",
+                "Contoh: PT.ALEXINDO PLANT 2": "Contoh: PT.ALEXINDO PLANT 2",
+                "Sub-Judul / Nama Warna Kuning": "Sub-Judul / Nama Warna Kuning",
+                "Contoh: MANAJEMEN PERBAIKAN": "Contoh: MANAJEMEN PERBAIKAN",
+                "Keterangan Sub-Header": "Keterangan Sub-Header",
+                "Contoh: Dashboard Monitoring & Laporan Kerja": "Contoh: Dashboard Monitoring & Laporan Kerja",
+                "3. Kustomisasi Nama-Nama Menu Sidebar Navigasi": "3. Kustomisasi Nama-Nama Menu Sidebar Navigasi",
+                "Menu 1: Laporan Harian": "Menu 1: Laporan Harian",
+                "Menu 2: Perintah Pekerjaan": "Menu 2: Perintah Pekerjaan",
+                "Menu 2B: Preventive Maintenance": "Menu 2B: Preventive Maintenance",
+                "Menu 3: Histori & Downtime": "Menu 3: Histori & Downtime",
+                "Menu 4: Laporan Spare Part": "Menu 4: Laporan Spare Part",
+                "Menu 5: Laporan Downtime": "Menu 5: Laporan Downtime",
+                "Menu 6: Inventory Spare Part": "Menu 6: Inventory Spare Part",
+                "Menu 7: Data PP (PR)": "Menu 7: Data PP (PR)",
+                "Menu 8: Grafik Downtime": "Menu 8: Grafik Downtime",
+                "Menu 9: Data Karyawan": "Menu 9: Data Karyawan",
+                "Menu 10: Pengaturan Master Admin": "Menu 10: Pengaturan Master Admin",
+                "Simpan Perubahan Judul & Menu": "Simpan Perubahan Judul & Menu",
+                "4. Pengaturan Logo Sistem": "4. Pengaturan Logo Sistem",
+                "Pilih File Foto Logo (Login & Sidebar)": "Pilih File Foto Logo (Login & Sidebar)",
+                "Preview": "Preview",
+                "Hapus / Kosongkan Logo": "Hapus / Kosongkan Logo",
+                "Simpan Logo Sistem": "Simpan Logo Sistem",
+                "5. Kontrol Akses & Kunci Edit Karyawan": "5. Kontrol Akses & Kunci Edit Karyawan",
+                "Pilih Status Penguncian Menu Karyawan": "Pilih Status Penguncian Menu Karyawan",
+                "🔓 Buka (Semua orang bisa tambah/edit karyawan)": "🔓 Buka (Semua orang bisa tambah/edit karyawan)",
+                "🔒 Kunci (Hanya Master Admin yang bisa tambah/edit karyawan)": "🔒 Kunci (Hanya Master Admin yang bisa tambah/edit karyawan)",
+                "Tentukan Siapa Saja Nama Master Admin (Pisahkan dengan koma)": "Tentukan Siapa Saja Nama Master Admin (Pisahkan dengan koma)",
+                "Contoh: Akim, Deden, Admin": "Contoh: Akim, Deden, Admin",
+                "Simpan Pengaturan Hak Akses": "Simpan Pengaturan Hak Akses",
+                "🕵️ 6. Riwayat Aktivitas / Audit Log Master Admin (Edit, Hapus, Tambah & Kurangi Part)": "🕵️ 6. Riwayat Aktivitas / Audit Log Master Admin (Edit, Hapus, Tambah & Kurangi Part)",
+                "Excel Log": "Excel Log",
+                "PDF Log": "PDF Log",
+                "Bersihkan Log": "Bersihkan Log",
+                "Kategori:": "Kategori:",
+                "Semua Aktivitas": "Semua Aktivitas",
+                "📦 Spare Part (Tambah/Edit/Hapus/Masuk/Kurangi)": "📦 Spare Part (Tambah/Edit/Hapus/Masuk/Kurangi)",
+                "📝 Laporan Harian (Edit/Hapus/Tambah)": "📝 Laporan Harian (Edit/Hapus/Tambah)",
+                "📋 Data PP (Tambah/Edit/Hapus)": "📋 Data PP (Tambah/Edit/Hapus)",
+                "📢 Perintah Pekerjaan": "📢 Perintah Pekerjaan",
+                "🛠️ Preventive Maintenance": "🛠️ Preventive Maintenance",
+                "⚙️ Karyawan & Pengaturan": "⚙️ Karyawan & Pengaturan",
+                "Jenis Aksi:": "Jenis Aksi:",
+                "Semua Aksi": "Semua Aksi",
+                "📥 Tambah Stok (+)": "📥 Tambah Stok (+)",
+                "📤 Kurangi Stok (-)": "📤 Kurangi Stok (-)",
+                "✏️ Edit / Ubah": "✏️ Edit / Ubah",
+                "🗑️ Hapus": "🗑️ Hapus",
+                "🔍 Cari nama admin, nama part, detail perubahan...": "🔍 Cari nama admin, nama part, detail perubahan...",
+                "Waktu (WIB)": "Waktu (WIB)",
+                "Pelaku / Admin": "Pelaku / Admin",
+                "Kategori": "Kategori",
+                "Detail Perubahan (Item / Part / Sebelum → Sesudah)": "Detail Perubahan (Item / Part / Sebelum → Sesudah)",
+                "Belum ada riwayat aktivitas tercatat.": "Belum ada riwayat aktivitas tercatat.",
+                "Sistem Operasional & Inventory Terintegrasi": "Sistem Operasional & Inventory Terintegrasi",
+                "📲 Pasang / Instal Aplikasi ke Layar Utama": "📲 Pasang / Instal Aplikasi ke Layar Utama",
+                "Aplikasi siap dipasang agar bisa dibuka layar penuh seperti aplikasi asli di Komputer maupun HP:": "Aplikasi siap dipasang agar bisa dibuka layar penuh seperti aplikasi asli di Komputer maupun HP:",
+                "💻 Komputer / Laptop (Chrome / Edge):": "💻 Komputer / Laptop (Chrome / Edge):",
+                "1. Pastikan halaman dibuka lewat link web online (HTTPS, seperti GitHub Pages).": "1. Pastikan halaman dibuka lewat link web online (HTTPS, seperti GitHub Pages).",
+                "2. Klik ikon": "2. Klik ikon",
+                "Instal (": "Instal (",
+                "/ +)": "/ +)",
+                "di ujung kanan kolom alamat URL browser, atau menu": "di ujung kanan kolom alamat URL browser, atau menu",
+                "Titik Tiga (⋮) → Simpan dan bagikan → Instal halaman sebagai aplikasi": "Titik Tiga (⋮) → Simpan dan bagikan → Instal halaman sebagai aplikasi",
+                "3. Klik": "3. Klik",
+                "Instal": "Instal",
+                "(ikon otomatis muncul di Desktop & Start Menu).": "(ikon otomatis muncul di Desktop & Start Menu).",
+                "🤖 Android (Chrome / Edge):": "🤖 Android (Chrome / Edge):",
+                "1. Ketuk ikon": "1. Ketuk ikon",
+                "Titik Tiga (⋮)": "Titik Tiga (⋮)",
+                "di pojok kanan atas browser.": "di pojok kanan atas browser.",
+                "2. Pilih": "2. Pilih",
+                "\"Tambahkan ke Layar Utama\"": "\"Tambahkan ke Layar Utama\"",
+                "atau": "atau",
+                "\"Instal Aplikasi\"": "\"Instal Aplikasi\"",
+                "3. Tekan": "3. Tekan",
+                "Pasang / Install": "Pasang / Install",
+                "🍎 iPhone / iPad (Safari):": "🍎 iPhone / iPad (Safari):",
+                "Bagikan / Share (": "Bagikan / Share (",
+                ")": ")",
+                "di bagian bawah Safari.": "di bagian bawah Safari.",
+                "2. Geser ke bawah dan pilih": "2. Geser ke bawah dan pilih",
+                "\"Add to Home Screen\" (Tambah ke Layar Utama)": "\"Add to Home Screen\" (Tambah ke Layar Utama)",
+                "Add / Tambah": "Add / Tambah",
+                "Mengerti": "Mengerti",
+                "🕵️ Riwayat Aktivitas (Edit, Hapus, Tambah & Kurangi Part)": "🕵️ Riwayat Aktivitas (Edit, Hapus, Tambah & Kurangi Part)",
+                "Semua Kategori": "Semua Kategori",
+                "📦 Spare Part": "📦 Spare Part",
+                "📝 Laporan Harian": "📝 Laporan Harian",
+                "📋 Data PP": "📋 Data PP",
+                "✏️ Edit": "✏️ Edit",
+                "Detail Aktivitas & Perubahan": "Detail Aktivitas & Perubahan",
+                "🔍 Cari nama pelaku, part, mesin...": "🔍 Cari nama pelaku, part, mesin...",
+                "Tutup": "Tutup",
+                "📝 Konfirmasi & Keterangan Pekerjaan": "📝 Konfirmasi & Keterangan Pekerjaan",
+                "Tulis Keterangan / Tindakan Pekerjaan Anda": "Tulis Keterangan / Tindakan Pekerjaan Anda",
+                "✔️ Simpan & Selesaikan": "✔️ Simpan & Selesaikan"
             },
             en: {
-                // Login
+                "Sistem Manajemen Operasional & Inventory": "Operational & Inventory Management System",
+                "✅ Konfirmasi Selesai Preventive Maintenance": "✅ Confirm Preventive Maintenance Completion",
+                "Tanggal Pelaksanaan": "Execution Date",
+                "Nama Teknisi / Pelaksana": "Technician / Executor Name",
+                "Hasil Pengecekan / Tindakan PM": "Inspection Results / PM Actions",
+                "*Wajib": "*Required",
+                "ℹ️ Tercatat khusus di": "ℹ️ Recorded specifically in",
+                "Preventive Maintenance": "Preventive Maintenance",
+                "untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).": "for this month's period (not added to Daily Report History).",
+                "Batal": "Cancel",
+                "✔️ Simpan & Tandai Selesai": "✔️ Save & Mark Completed",
+                "🇮🇩 IN": "🇮🇩 IN",
+                "🇬🇧 ENG": "🇬🇧 ENG",
+                "SISTEM OPERASIONAL": "OPERATIONAL SYSTEM",
+                "MANAJEMEN PERBAIKAN": "MAINTENANCE MANAGEMENT",
                 "Nama Depan / Nama Karyawan": "First Name / Employee Name",
                 "Masukkan Nama Depan...": "Enter First Name...",
+                "PIN Keamanan": "Security PIN",
                 "VERIFIKASI & MASUK": "VERIFY & LOGIN",
-                "Keluar": "Logout",
-
-                // Sidebar Defaults
+                "PASANG APLIKASI DI HP / DESKTOP": "INSTALL APP ON PHONE / DESKTOP",
+                "IN": "IN",
+                "ENG": "ENG",
+                "🟢 LIVE": "🟢 LIVE",
                 "LAPORAN HARIAN": "DAILY REPORT",
                 "PERINTAH PEKERJAAN": "WORK ORDERS",
-                "PREVENTIVE MAINTENANCE": "PREVENTIVE MAINTENANCE",
                 "HISTORI & DOWNTIME": "HISTORY & DOWNTIME",
                 "LAPORAN SPARE PART": "SPARE PART REPORT",
                 "LAPORAN DOWNTIME": "DOWNTIME REPORT",
@@ -6017,9 +6279,13 @@
                 "DATA KARYAWAN & PIN": "EMPLOYEES & PIN",
                 "PENGATURAN MASTER ADMIN": "MASTER ADMIN SETTINGS",
                 "PASANG APLIKASI": "INSTALL APP",
-                "PASANG APLIKASI DI HP / DESKTOP": "INSTALL APP ON PHONE / DESKTOP",
-
-                // Tab 1: Laporan Harian
+                "APP": "APP",
+                "🚨 PERHATIAN! ADA": "🚨 ATTENTION! THERE ARE",
+                "PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨": "NEW WORK ORDERS FROM MASTER ADMIN PENDING ACTION! CLICK HERE TO VIEW & FILL NOTES 🚨",
+                "SISTEM OPERASIONAL & INVENTORY": "OPERATIONAL & INVENTORY SYSTEM",
+                "🟢 LIVE SYNC": "🟢 LIVE SYNC",
+                "Dashboard Monitoring & Laporan Kerja": "Monitoring Dashboard & Work Reports",
+                "Keluar": "Logout",
                 "Form Input Laporan Kerja & Downtime Mesin": "Work Report & Machine Downtime Entry Form",
                 "Edit Laporan Kerja & Downtime Mesin": "Edit Work Report & Machine Downtime",
                 "Pilih Unit Mesin": "Select Machine Unit",
@@ -6029,6 +6295,10 @@
                 "🔍 Pengecekan / Kontrol": "🔍 Inspection / Check",
                 "🔄 Pekerjaan Rutin / Preventive": "🔄 Routine Work / Preventive",
                 "Shift Kerja": "Work Shift",
+                "Shift 1": "Shift 1",
+                "Shift 2": "Shift 2",
+                "Shift 3": "Shift 3",
+                "Non shift/NS": "Non-shift / NS",
                 "Personel / Pelapor": "Personnel / Reporter",
                 "Nama Teknis / Pelapor...": "Technician / Reporter Name...",
                 "Equipment (Komponen Mesin)": "Equipment (Machine Component)",
@@ -6056,23 +6326,86 @@
                 "SIMPAN LAPORAN": "SAVE REPORT",
                 "PERBARUI LAPORAN": "UPDATE REPORT",
                 "BATALKAN EDIT": "CANCEL EDIT",
-
-                // Tab 2: Perintah Pekerjaan
                 "🚨 Instruksi & Perintah Pekerjaan dari Master Admin": "🚨 Instructions & Work Orders from Master Admin",
+                "PDF": "PDF",
+                "Excel": "Excel",
                 "➕ Buat & Kirim Perintah Pekerjaan Baru (Khusus Master Admin)": "➕ Create & Send New Work Order (Master Admin Only)",
                 "Ditujukan Kepada Personel": "Assigned to Personnel",
                 "Unit Mesin": "Machine Unit",
+                "Misal: Conveyor, Motor, Pompa...": "E.g.: Conveyor, Motor, Pump...",
                 "Issue / Masalah Ditemukan": "Issue / Problem Found",
+                "Misal: Suara kasar, Oli bocor, Sensor error...": "E.g.: Unusual noise, Oil leak, Sensor error...",
                 "Detail Perintah Pekerjaan": "Work Order Details",
+                "Tuliskan instruksi pekerjaan yang harus segera dilakukan personel...": "Write work instructions to be executed promptly by personnel...",
                 "📢 KIRIM PERINTAH PEKERJAAN": "📢 SEND WORK ORDER",
+                "💾 SIMPAN PERUBAHAN PERINTAH": "💾 SAVE WORK ORDER CHANGES",
+                "Batal Edit": "Cancel Edit",
+                "\"✔️ Dikerjakan & Isi Keterangan\"": "\"✔️ Completed & Fill Notes\"",
+                "untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.": "to enter your work notes and save them to History.",
+                "⚙️ Unit Mesin:": "⚙️ Machine Unit:",
+                "Semua Mesin": "All Machines",
+                "📅 Tanggal:": "📅 Date:",
+                "Reset Filter": "Reset Filter",
+                "🔍 Cari personel, equipment, issue, perintah...": "🔍 Search personnel, equipment, issue, order...",
                 "Tanggal & Pemberi": "Date & Issuer",
                 "Personel Tujuan": "Assigned Personnel",
                 "Mesin & Equipment": "Machine & Equipment",
                 "Issue & Perintah Pekerjaan": "Issue & Work Order",
                 "Status & Keterangan Personel": "Status & Personnel Notes",
                 "Aksi / Konfirmasi": "Action / Confirmation",
-
-                // Tab 3: Histori & Downtime
+                "Memuat daftar perintah pekerjaan...": "Loading work orders list...",
+                "🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)": "🛠️ Preventive Maintenance Schedule & Checklist (Odd / Even)",
+                "📅 Periode Aktif Saat Ini:": "📅 Active Period:",
+                "Memuat Periode...": "Loading Period...",
+                "♻️ Daftar master pekerjaan cukup diinput 1x — status otomatis reset setiap pergantian bulan!": "♻️ Master work items only need to be entered once — status automatically resets each month!",
+                "Januari (Ganjil)": "January (Odd)",
+                "Februari (Genap)": "February (Even)",
+                "Maret (Ganjil)": "March (Odd)",
+                "April (Genap)": "April (Even)",
+                "Mei (Ganjil)": "May (Odd)",
+                "Juni (Genap)": "June (Even)",
+                "Juli (Ganjil)": "July (Odd)",
+                "Agustus (Genap)": "August (Even)",
+                "September (Ganjil)": "September (Odd)",
+                "Oktober (Genap)": "October (Even)",
+                "November (Ganjil)": "November (Odd)",
+                "Desember (Genap)": "December (Even)",
+                "Total Item PM Bulan Ini": "Total PM Items This Month",
+                "Sudah Selesai (Done)": "Completed (Done)",
+                "Belum Dikerjakan": "Pending / Not Done",
+                "Progres Bulan Ini": "Monthly Progress",
+                "➕ Tambah Master Pekerjaan Preventive Maintenance (Berulang Tiap Bulan Ganjil/Genap)": "➕ Add Preventive Maintenance Master Item (Recurring Odd/Even Months)",
+                "Siklus Jadwal Bulan": "Month Schedule Cycle",
+                "🔴 BULAN GANJIL (Jan, Mar, Mei, Jul, Sep, Nov)": "🔴 ODD MONTHS (Jan, Mar, May, Jul, Sep, Nov)",
+                "🔵 BULAN GENAP (Feb, Apr, Jun, Agu, Okt, Des)": "🔵 EVEN MONTHS (Feb, Apr, Jun, Aug, Oct, Dec)",
+                "🟢 SETIAP BULAN (Ganjil & Genap)": "🟢 EVERY MONTH (Odd & Even)",
+                "🟡 PEKERJAAN TAMBAHAN (Insidental / Sekali Bulan)": "🟡 ADDITIONAL WORK (Incidental / One-Time Monthly)",
+                "Equipment / Bagian Mesin": "Equipment / Machine Section",
+                "Misal: Hydraulic Pump, Gearbox, Bearing...": "E.g.: Hydraulic Pump, Gearbox, Bearing...",
+                "Item Pekerjaan / Checklist PM": "PM Work Item / Checklist",
+                "Misal: Ganti oli hidrolik, Greasing bearing, Cek kekencangan baut...": "E.g.: Change hydraulic oil, Grease bearing, Check bolt torque...",
+                "Standar / Target Pemeriksaan (Opsional)": "Inspection Standard / Target (Optional)",
+                "Misal: Level oli full, Tidak ada kebocoran, Suhu < 60°C...": "E.g.: Oil level full, No leakage, Temp < 60°C...",
+                "💾 SIMPAN ITEM PREVENTIVE": "💾 SAVE PREVENTIVE ITEM",
+                "ℹ️ Anda masuk sebagai Operator/Personel. Di menu Preventive Maintenance Anda hanya dapat mengerjakan checklist (": "ℹ️ You are logged in as Operator/Personnel. In Preventive Maintenance you can only execute checklists (",
+                "); tambah, edit, hapus, atau reset master jadwal khusus Master Admin.": "); adding, editing, deleting, or resetting master schedules is for Master Admin only.",
+                "Filter Siklus:": "Cycle Filter:",
+                "📌 Jadwal Aktif Bulan Terpilih (Otomatis)": "📌 Active Schedule for Selected Month (Auto)",
+                "📋 Semua Master Jadwal (Ganjil + Genap + Tambahan)": "📋 All Master Schedules (Odd + Even + Additional)",
+                "🔴 Hanya Bulan Ganjil": "🔴 Odd Months Only",
+                "🔵 Hanya Bulan Genap": "🔵 Even Months Only",
+                "🟢 Hanya Setiap Bulan": "🟢 Every Month Only",
+                "🟡 Hanya Pekerjaan Tambahan": "🟡 Additional Work Only",
+                "Unit Mesin:": "Machine Unit:",
+                "🔍 Cari mesin, equipment, item pekerjaan PM...": "🔍 Search machine, equipment, PM work item...",
+                "No": "No",
+                "Siklus Bulan": "Month Cycle",
+                "Equipment": "Equipment",
+                "Item Pekerjaan PM & Standar": "PM Work Item & Standard",
+                "Status Bulan Ini": "Monthly Status",
+                "Pelaksana & Keterangan": "Executor & Notes",
+                "Aksi / Checklist": "Action / Checklist",
+                "Memuat jadwal Preventive Maintenance...": "Loading Preventive Maintenance schedule...",
                 "📅 Periode Bulan:": "📅 Month Period:",
                 "Semua Bulan": "All Months",
                 "Januari": "January", "Februari": "February", "Maret": "March", "April": "April",
@@ -6080,24 +6413,25 @@
                 "September": "September", "Oktober": "October", "November": "November", "Desember": "December",
                 "Rentang Tgl:": "Date Range:",
                 "s/d": "to",
-                "Unit Mesin:": "Machine Unit:",
+                "Reset": "Reset",
                 "Semua Mesin": "All Machines",
                 "Filter Jenis:": "Report Type:",
                 "Semua Jenis": "All Types",
                 "🔄 Pekerjaan Rutin": "🔄 Routine Work",
                 "Akumulasi Total Downtime Bulanan Per Mesin": "Monthly Total Downtime Accumulation per Machine",
                 "Histori Kerusakan & Perbaikan": "Breakdown & Repair History",
+                "Riwayat Admin": "Admin Log",
                 "🔍 Cari kata kunci bebas (equipment, issue, personel, dll)...": "🔍 Search keywords (equipment, issue, personnel, etc.)...",
                 "Tanggal & Shift": "Date & Shift",
                 "Mesin": "Machine",
+                "Equipment / Issue": "Equipment / Issue",
                 "Personel": "Personnel",
                 "Spare Part & Qty": "Spare Part & Qty",
                 "Jam / Waktu Downtime": "Downtime Period",
                 "Durasi Downtime": "Downtime Duration",
                 "Keterangan": "Description",
                 "Aksi": "Action",
-
-                // Tab Laporan Sparepart & Downtime
+                "Memuat data...": "Loading data...",
                 "📦 Rekapitulasi Pemakaian Spare Part": "📦 Spare Part Usage Summary",
                 "🔍 Cari nama part, mesin, personel...": "🔍 Search part name, machine, personnel...",
                 "Spare Part & Qty Terpakai": "Used Spare Part & Qty",
@@ -6105,101 +6439,436 @@
                 "🔍 Cari mesin, equipment, issue...": "🔍 Search machine, equipment, issue...",
                 "Spare Part Terpakai": "Used Spare Part",
                 "Waktu Downtime": "Downtime Period",
-
-                // Tab Inventory Sparepart
                 "Inventory Spare Part Gudang": "Warehouse Spare Part Inventory",
+                "Riwayat Edit & Stok": "Edit & Stock Log",
                 "➕ Tambah / Edit Spare Part (Master Admin)": "➕ Add / Edit Spare Part (Master Admin)",
                 "Nama Item": "Item Name",
+                "Nama item...": "Item name...",
                 "Spesifikasi / Type": "Specification / Type",
+                "Spesifikasi...": "Specification...",
                 "Lokasi Part": "Part Location",
+                "Rak A-1...": "Rack A-1...",
                 "Satuan": "Unit",
                 "Stok Awal": "Initial Stock",
+                "Total Masuk (Stok)": "Total In (Stock)",
+                "Nama Mesin...": "Machine Name...",
                 "Simpan": "Save",
                 "Batal Edit": "Cancel Edit",
+                "ℹ️ Anda masuk sebagai Pengguna Biasa. Penambahan & Perubahan stok spare part hanya dapat dilakukan oleh Master Admin.": "ℹ️ You are logged in as a Regular User. Adding & modifying spare part stock is restricted to Master Admin.",
+                "Total Item Terdaftar": "Total Registered Items",
+                "Stok Aman (> 2)": "Safe Stock (> 2)",
+                "Stok Limit (1 - 2)": "Low Stock (1 - 2)",
+                "Stok Habis (0)": "Out of Stock (0)",
                 "🔍 Cari nama part, spesifikasi, lokasi rak, mesin...": "🔍 Search part name, spec, rack location, machine...",
                 "Total Masuk & Riwayat": "Total In & History",
                 "Stok Keluar": "Stock Out",
                 "Sisa Stok": "Remaining Stock",
                 "Tanggal Input & Keluar": "In & Out Dates",
-
-                // Tab Data PP
                 "📋 Monitoring Data PP (Purchase Requisition)": "📋 Purchase Requisition (PR) Monitoring",
                 "➕ Input / Edit Data PP (Master Admin)": "➕ Add / Edit PR Data (Master Admin)",
+                "ITEM": "ITEM",
+                "Nama Item / Barang...": "Item / Material Name...",
+                "SPECIFICATION": "SPECIFICATION",
+                "Spesifikasi / Type / Ukuran...": "Specification / Type / Size...",
+                "QTY & SATUAN": "QTY & UNIT",
+                "DESCRIPTION": "DESCRIPTION",
+                "Untuk kebutuhan / bagian...": "For requirement / section...",
+                "MACHINE": "MACHINE",
+                "PRIORITY": "PRIORITY",
+                "Critical": "Critical",
+                "Normal": "Normal",
+                "Urgent": "Urgent",
+                "DATE PP": "PR DATE",
+                "NO. PP": "PR NO.",
+                "Contoh: 021/MTC/III/2026": "E.g.: 021/MTC/III/2026",
+                "PURC (Purchasing)": "PURC (Purchasing)",
+                "Belum": "Pending",
+                "Sudah": "Done",
+                "PO (No. PO)": "PO (PO No.)",
+                "Kosongkan jika belum PO...": "Leave blank if no PO yet...",
+                "MRR": "MRR",
+                "No/Tgl MRR jika barang datang...": "MRR No/Date when item arrives...",
+                "DONE (Otomatis Tambah Stok Inventory Jika DONE)": "DONE (Auto-Add to Inventory Stock if DONE)",
+                "Belum Selesai": "Not Completed",
+                "DONE (Barang Datang / Otomatis Masuk Inventory)": "DONE (Item Arrived / Auto-Added to Inventory)",
+                "REMARK": "REMARK",
+                "Catatan / Keterangan tambahan...": "Additional notes / remarks...",
+                "💾 SIMPAN DATA PP": "💾 SAVE PR DATA",
+                "ℹ️ Anda masuk sebagai Pengguna Biasa. Penginputan & Perubahan Data PP hanya dapat dilakukan oleh Master Admin.": "ℹ️ You are logged in as a Regular User. Adding & editing PR Data is restricted to Master Admin.",
                 "Filter Status PP:": "PR Status Filter:",
                 "Semua Data PP": "All PR Data",
                 "⏳ Belum PO / Proses (Merah)": "⏳ No PO / In Process (Red)",
                 "🟡 Sudah PO / Menunggu Barang (Kuning)": "🟡 PO Issued / Awaiting Delivery (Yellow)",
                 "🟢 Selesai / DONE (Hijau)": "🟢 Completed / DONE (Green)",
-
-                // Tab Grafik & Karyawan & Pengaturan
+                "🔍 Cari Item, Spesifikasi, Mesin, No. PP, PO, Remark...": "🔍 Search Item, Spec, Machine, PR No., PO, Remark...",
+                "QTY": "QTY",
+                "Machine": "Machine",
+                "Priority": "Priority",
+                "PURC": "PURC",
+                "PO": "PO",
+                "DONE": "DONE",
+                "Memuat data PP...": "Loading PR data...",
                 "📈 Grafik Tren & Durasi Downtime": "📈 Downtime Trend & Duration Chart",
                 "Grafik durasi jam per bulan untuk setiap unit mesin.": "Monthly downtime duration chart (in hours) per machine unit.",
                 "Daftar Personel & Kelola PIN Akses": "Personnel List & Access PIN Management",
+                "➕ Tambah Karyawan Baru & Set PIN Akses (Master Admin)": "➕ Add New Employee & Set Access PIN",
+                "NIK / ID": "Employee ID / NIK",
+                "NIK...": "Employee ID...",
                 "Nama Lengkap": "Full Name",
+                "Nama...": "Name...",
                 "No. Telepon": "Phone Number",
+                "08...": "08...",
                 "Jabatan": "Position",
+                "Jabatan...": "Position...",
+                "PIN Keamanan Login": "Login Security PIN",
+                "Ketik PIN...": "Enter PIN...",
+                "🔒 Pengelolaan Data Karyawan & PIN dikunci oleh Master Admin. Hanya Master Admin yang dapat melakukan perubahan.": "🔒 Employee & PIN management is locked by Master Admin. Only Master Admin can make changes.",
+                "🔍 Cari NIK, nama karyawan, nomor telepon...": "🔍 Search ID, employee name, phone number...",
+                "NIK": "ID / NIK",
                 "Status Keamanan PIN": "PIN Security Status",
                 "⚙️ Pengaturan Master Admin & Kelola Master Data": "⚙️ Master Admin Settings & Master Data Management",
-                "Sistem Operasional & Inventory Terintegrasi": "Integrated Operational & Inventory Management System"
+                "⛔ Anda masuk sebagai pengguna biasa (Bukan Master Admin). Menu pengaturan ini dikunci dari perubahan.": "⛔ You are logged in as a regular user (Not Master Admin). This settings menu is locked from changes.",
+                "🛠️ 1. Kelola Master Daftar Mesin & Satuan (Khusus Master Admin)": "🛠️ 1. Manage Master Machine & Unit Lists (Master Admin Only)",
+                "Daftar Unit Mesin Operasional": "Operational Machine Units List",
+                "Nama Mesin Baru...": "New Machine Name...",
+                "➕ Tambah": "➕ Add",
+                "Daftar Satuan Part / Material": "Part / Material Units List",
+                "Satuan Baru...": "New Unit...",
+                "2. Kustomisasi Judul Header & Sub-Judul": "2. Customize Header Title & Sub-Title",
+                "Judul Utama Header & Sistem (Atas & Sidebar)": "Main Header & System Title (Top & Sidebar)",
+                "Contoh: PT.ALEXINDO PLANT 2": "E.g.: PT.ALEXINDO PLANT 2",
+                "Sub-Judul / Nama Warna Kuning": "Sub-Title / Yellow Accent Title",
+                "Contoh: MANAJEMEN PERBAIKAN": "E.g.: MAINTENANCE MANAGEMENT",
+                "Keterangan Sub-Header": "Sub-Header Description",
+                "Contoh: Dashboard Monitoring & Laporan Kerja": "E.g.: Monitoring Dashboard & Work Reports",
+                "3. Kustomisasi Nama-Nama Menu Sidebar Navigasi": "3. Customize Sidebar Navigation Menu Names",
+                "Menu 1: Laporan Harian": "Menu 1: Daily Report",
+                "Menu 2: Perintah Pekerjaan": "Menu 2: Work Orders",
+                "Menu 2B: Preventive Maintenance": "Menu 2B: Preventive Maintenance",
+                "Menu 3: Histori & Downtime": "Menu 3: History & Downtime",
+                "Menu 4: Laporan Spare Part": "Menu 4: Spare Part Report",
+                "Menu 5: Laporan Downtime": "Menu 5: Downtime Report",
+                "Menu 6: Inventory Spare Part": "Menu 6: Spare Part Inventory",
+                "Menu 7: Data PP (PR)": "Menu 7: PR Data (Purchase Req)",
+                "Menu 8: Grafik Downtime": "Menu 8: Downtime Chart",
+                "Menu 9: Data Karyawan": "Menu 9: Employee Data",
+                "Menu 10: Pengaturan Master Admin": "Menu 10: Master Admin Settings",
+                "Simpan Perubahan Judul & Menu": "Save Title & Menu Changes",
+                "4. Pengaturan Logo Sistem": "4. System Logo Settings",
+                "Pilih File Foto Logo (Login & Sidebar)": "Choose Logo Image File (Login & Sidebar)",
+                "Preview": "Preview",
+                "Hapus / Kosongkan Logo": "Remove / Clear Logo",
+                "Simpan Logo Sistem": "Save System Logo",
+                "5. Kontrol Akses & Kunci Edit Karyawan": "5. Access Control & Employee Edit Lock",
+                "Pilih Status Penguncian Menu Karyawan": "Select Employee Menu Lock Status",
+                "🔓 Buka (Semua orang bisa tambah/edit karyawan)": "🔓 Unlocked (Everyone can add/edit employees)",
+                "🔒 Kunci (Hanya Master Admin yang bisa tambah/edit karyawan)": "🔒 Locked (Only Master Admin can add/edit employees)",
+                "Tentukan Siapa Saja Nama Master Admin (Pisahkan dengan koma)": "Specify Master Admin Names (Comma-separated)",
+                "Contoh: Akim, Deden, Admin": "E.g.: Akim, Deden, Admin",
+                "Simpan Pengaturan Hak Akses": "Save Access Control Settings",
+                "🕵️ 6. Riwayat Aktivitas / Audit Log Master Admin (Edit, Hapus, Tambah & Kurangi Part)": "🕵️ 6. Master Admin Activity / Audit Log (Edit, Delete, Add & Deduct Parts)",
+                "Excel Log": "Excel Log",
+                "PDF Log": "PDF Log",
+                "Bersihkan Log": "Clear Log",
+                "Kategori:": "Category:",
+                "Semua Aktivitas": "All Activities",
+                "📦 Spare Part (Tambah/Edit/Hapus/Masuk/Kurangi)": "📦 Spare Part (Add/Edit/Delete/In/Out)",
+                "📝 Laporan Harian (Edit/Hapus/Tambah)": "📝 Daily Report (Edit/Delete/Add)",
+                "📋 Data PP (Tambah/Edit/Hapus)": "📋 PR Data (Add/Edit/Delete)",
+                "📢 Perintah Pekerjaan": "📢 Work Orders",
+                "🛠️ Preventive Maintenance": "🛠️ Preventive Maintenance",
+                "⚙️ Karyawan & Pengaturan": "⚙️ Employees & Settings",
+                "Jenis Aksi:": "Action Type:",
+                "Semua Aksi": "All Actions",
+                "📥 Tambah Stok (+)": "📥 Stock In (+)",
+                "📤 Kurangi Stok (-)": "📤 Stock Out (-)",
+                "✏️ Edit / Ubah": "✏️ Edit / Modify",
+                "🗑️ Hapus": "🗑️ Delete",
+                "🔍 Cari nama admin, nama part, detail perubahan...": "🔍 Search admin name, part name, change details...",
+                "Waktu (WIB)": "Time (WIB)",
+                "Pelaku / Admin": "Actor / Admin",
+                "Kategori": "Category",
+                "Detail Perubahan (Item / Part / Sebelum → Sesudah)": "Change Details (Item / Part / Before → After)",
+                "Belum ada riwayat aktivitas tercatat.": "No activity history recorded yet.",
+                "Sistem Operasional & Inventory Terintegrasi": "Integrated Operational & Inventory Management System",
+                "📲 Pasang / Instal Aplikasi ke Layar Utama": "📲 Install App to Home Screen",
+                "Aplikasi siap dipasang agar bisa dibuka layar penuh seperti aplikasi asli di Komputer maupun HP:": "Ready to install for full-screen app experience on both Desktop and Mobile:",
+                "💻 Komputer / Laptop (Chrome / Edge):": "💻 Computer / Laptop (Chrome / Edge):",
+                "1. Pastikan halaman dibuka lewat link web online (HTTPS, seperti GitHub Pages).": "1. Make sure the page is opened via an online web link (HTTPS, such as GitHub Pages).",
+                "2. Klik ikon": "2. Click the",
+                "Instal (": "Install (",
+                "/ +)": "/ +)",
+                "di ujung kanan kolom alamat URL browser, atau menu": "at the far right of the browser address bar, or menu",
+                "Titik Tiga (⋮) → Simpan dan bagikan → Instal halaman sebagai aplikasi": "Three Dots (⋮) → Save and share → Install page as app",
+                "3. Klik": "3. Click",
+                "Instal": "Install",
+                "(ikon otomatis muncul di Desktop & Start Menu).": "(icon automatically appears on Desktop & Start Menu).",
+                "🤖 Android (Chrome / Edge):": "🤖 Android (Chrome / Edge):",
+                "1. Ketuk ikon": "1. Tap the",
+                "Titik Tiga (⋮)": "Three Dots (⋮)",
+                "di pojok kanan atas browser.": "icon in the top-right corner of the browser.",
+                "2. Pilih": "2. Select",
+                "\"Tambahkan ke Layar Utama\"": "\"Add to Home Screen\"",
+                "atau": "or",
+                "\"Instal Aplikasi\"": "\"Install App\"",
+                "3. Tekan": "3. Tap",
+                "Pasang / Install": "Install",
+                "🍎 iPhone / iPad (Safari):": "🍎 iPhone / iPad (Safari):",
+                "Bagikan / Share (": "Share (",
+                ")": ")",
+                "di bagian bawah Safari.": "at the bottom of Safari.",
+                "2. Geser ke bawah dan pilih": "2. Scroll down and select",
+                "\"Add to Home Screen\" (Tambah ke Layar Utama)": "\"Add to Home Screen\"",
+                "Add / Tambah": "Add",
+                "Mengerti": "Got It",
+                "🕵️ Riwayat Aktivitas (Edit, Hapus, Tambah & Kurangi Part)": "🕵️ Activity Log (Edit, Delete, Add & Deduct Parts)",
+                "Semua Kategori": "All Categories",
+                "📦 Spare Part": "📦 Spare Part",
+                "📝 Laporan Harian": "📝 Daily Report",
+                "📋 Data PP": "📋 PR Data",
+                "✏️ Edit": "✏️ Edit",
+                "Detail Aktivitas & Perubahan": "Activity & Change Details",
+                "🔍 Cari nama pelaku, part, mesin...": "🔍 Search actor, part, machine...",
+                "Tutup": "Close",
+                "📝 Konfirmasi & Keterangan Pekerjaan": "📝 Work Confirmation & Notes",
+                "Tulis Keterangan / Tindakan Pekerjaan Anda": "Write Your Work Notes / Actions Taken",
+                "✔️ Simpan & Selesaikan": "✔️ Save & Complete"
             }
         };
+
+        const dynamicPhrasePairs = [
+            ["Belum Dikerjakan", "Pending / Not Done"],
+            ["Sudah Dikerjakan", "Completed"],
+            ["Belum Selesai", "Not Completed"],
+            ["Selesai", "Completed"],
+            ["SELESAI", "COMPLETED"],
+            ["BELUM", "PENDING"],
+            ["HABIS", "OUT OF STOCK"],
+            ["LIMIT", "LOW STOCK"],
+            ["AMAN", "SAFE"],
+            ["Dikerjakan & Isi Keterangan", "Completed & Fill Notes"],
+            ["✔️ Dikerjakan & Isi Keterangan", "✔️ Completed & Fill Notes"],
+            ["✔️ Kerjakan", "✔️ Execute"],
+            ["Edit", "Edit"],
+            ["Hapus", "Delete"],
+            ["Masuk", "Stock In"],
+            ["Kurangi", "Stock Out"],
+            ["Batal", "Cancel"],
+            ["Simpan", "Save"],
+            ["Tutup", "Close"],
+            ["0 Menit", "0 Mins"],
+            ["Jam", "Hrs"],
+            ["Menit", "Mins"],
+            ["Item", "Items"],
+            ["Tidak ada data", "No data"],
+            ["Belum ada catatan riwayat yang cocok.", "No matching activity history found."],
+            ["Belum ada riwayat aktivitas tercatat.", "No activity history recorded yet."],
+            ["Belum ada riwayat stok/keluar", "No stock in/out history yet"],
+            ["Reset status bulan ini", "Reset this month's status"],
+            ["BULAN GANJIL", "ODD MONTH"],
+            ["BULAN GENAP", "EVEN MONTH"],
+            ["SETIAP BULAN", "EVERY MONTH"],
+            ["PEKERJAAN TAMBAHAN", "ADDITIONAL WORK"],
+            ["GANJIL", "ODD"],
+            ["GENAP", "EVEN"],
+            ["Periode:", "Period:"],
+            ["Pelaksana:", "Executor:"],
+            ["Keterangan:", "Notes:"],
+            ["Tanggal:", "Date:"],
+            ["Pemberi:", "Issuer:"],
+            ["Perintah:", "Order:"],
+            ["Issue:", "Issue:"],
+            ["Equip:", "Equip:"],
+            ["Lokasi:", "Location:"],
+            ["Mesin:", "Machine:"],
+            ["Satuan:", "Unit:"],
+            ["Terpakai:", "Used:"],
+            ["Masuk:", "In:"],
+            ["Keluar:", "Out:"],
+            ["Sisa:", "Remaining:"],
+            ["Terkunci", "Locked"],
+            ["Terbuka", "Unlocked"],
+            ["Aktif", "Active"],
+            ["Nonaktif", "Inactive"]
+        ];
 
         const reverseEnToId = {};
         Object.keys(i18nDict.id).forEach(idKey => {
             const enVal = i18nDict.en[idKey];
             if (enVal) reverseEnToId[enVal] = idKey;
         });
+        dynamicPhrasePairs.forEach(([idTxt, enTxt]) => {
+            if (!i18nDict.id[idTxt]) i18nDict.id[idTxt] = idTxt;
+            if (!i18nDict.en[idTxt]) i18nDict.en[idTxt] = enTxt;
+            reverseEnToId[enTxt] = idTxt;
+        });
+
+        function translateDynamicText(str, lang = currentLang) {
+            if (typeof str !== 'string' || !str.trim()) return str;
+            const dict = i18nDict[lang] || i18nDict.id;
+            const trimmed = str.trim();
+            const baseKey = (lang === 'en') ? trimmed : (reverseEnToId[trimmed] || trimmed);
+            if (dict[baseKey]) {
+                return str.replace(trimmed, dict[baseKey]);
+            }
+
+            if (lang === 'en') {
+                let out = str
+                    .replace(/\b(\d+)\s*Jam\s*(\d+)\s*Menit\b/gi, '$1 Hrs $2 Mins')
+                    .replace(/\b(\d+)\s*Jam\b/gi, '$1 Hrs')
+                    .replace(/\b(\d+)\s*Menit\s*\(Manual\)/gi, '$1 Mins (Manual)')
+                    .replace(/\b(\d+)\s*Menit\b/gi, '$1 Mins')
+                    .replace(/\b(\d+)\s*Item\b/gi, '$1 Items')
+                    .replace(/\bBelum Dikerjakan\b/g, 'Pending / Not Done')
+                    .replace(/\bSudah Dikerjakan\b/g, 'Completed')
+                    .replace(/\bBelum Selesai\b/g, 'Not Completed')
+                    .replace(/\bBULAN GANJIL\b/g, 'ODD MONTH')
+                    .replace(/\bBULAN GENAP\b/g, 'EVEN MONTH')
+                    .replace(/\bSETIAP BULAN\b/g, 'EVERY MONTH')
+                    .replace(/\bPEKERJAAN TAMBAHAN\b/g, 'ADDITIONAL WORK')
+                    .replace(/\bJanuari\b/g, 'January')
+                    .replace(/\bFebruari\b/g, 'February')
+                    .replace(/\bMaret\b/g, 'March')
+                    .replace(/\bMei\b/g, 'May')
+                    .replace(/\bJuni\b/g, 'June')
+                    .replace(/\bJuli\b/g, 'July')
+                    .replace(/\bAgustus\b/g, 'August')
+                    .replace(/\bOktober\b/g, 'October')
+                    .replace(/\bDesember\b/g, 'December')
+                    .replace(/\bGanjil\b/g, 'Odd')
+                    .replace(/\bGenap\b/g, 'Even');
+                return out;
+            } else {
+                let out = str
+                    .replace(/\b(\d+)\s*Hrs\s*(\d+)\s*Mins\b/gi, '$1 Jam $2 Menit')
+                    .replace(/\b(\d+)\s*Hrs\b/gi, '$1 Jam')
+                    .replace(/\b(\d+)\s*Mins\s*\(Manual\)/gi, '$1 Menit (Manual)')
+                    .replace(/\b(\d+)\s*Mins\b/gi, '$1 Menit')
+                    .replace(/\b(\d+)\s*Items\b/gi, '$1 Item')
+                    .replace(/\bPending \/ Not Done\b/g, 'Belum Dikerjakan')
+                    .replace(/\bCompleted\b/g, 'Sudah Dikerjakan')
+                    .replace(/\bNot Completed\b/g, 'Belum Selesai')
+                    .replace(/\bODD MONTH\b/g, 'BULAN GANJIL')
+                    .replace(/\bEVEN MONTH\b/g, 'BULAN GENAP')
+                    .replace(/\bEVERY MONTH\b/g, 'SETIAP BULAN')
+                    .replace(/\bADDITIONAL WORK\b/g, 'PEKERJAAN TAMBAHAN')
+                    .replace(/\bJanuary\b/g, 'Januari')
+                    .replace(/\bFebruary\b/g, 'Februari')
+                    .replace(/\bMarch\b/g, 'Maret')
+                    .replace(/\bMay\b/g, 'Mei')
+                    .replace(/\bJune\b/g, 'Juni')
+                    .replace(/\bJuly\b/g, 'Juli')
+                    .replace(/\bAugust\b/g, 'Agustus')
+                    .replace(/\bOctober\b/g, 'Oktober')
+                    .replace(/\bDecember\b/g, 'Desember')
+                    .replace(/\bOdd\b/g, 'Ganjil')
+                    .replace(/\bEven\b/g, 'Genap');
+                return out;
+            }
+        }
+
+        function translateTextNodesInElement(rootEl, lang = currentLang) {
+            if (!rootEl) return;
+            const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, null);
+            let node;
+            while ((node = walker.nextNode())) {
+                const parentTag = node.parentElement ? node.parentElement.tagName : '';
+                if (parentTag === 'SCRIPT' || parentTag === 'STYLE') continue;
+                const orig = node.nodeValue;
+                if (!orig || !orig.trim()) continue;
+                const translated = translateDynamicText(orig, lang);
+                if (translated !== orig) {
+                    node.nodeValue = translated;
+                }
+            }
+        }
+
+        let _isApplyingLang = false;
 
         function applyLanguageDOM(lang) {
-            const targetDict = i18nDict[lang] || i18nDict.id;
-            const selectors = 'label, h3, h4, th, option, button, span, p, div.system-footer';
-            document.querySelectorAll(selectors).forEach(el => {
-                // Hanya ubah elemen yang tidak punya child elemen kompleks (leaf text atau span tunggal)
-                if (el.children.length === 0) {
+            if (_isApplyingLang) return;
+            _isApplyingLang = true;
+            try {
+                const targetDict = i18nDict[lang] || i18nDict.id;
+                const selectors = 'label, h3, h4, th, option, button, span, p, li, div.system-footer';
+                document.querySelectorAll(selectors).forEach(el => {
                     const txt = el.textContent.trim();
                     if (!txt) return;
                     const baseKey = (lang === 'en') ? txt : (reverseEnToId[txt] || txt);
                     if (targetDict[baseKey]) {
-                        el.textContent = targetDict[baseKey];
+                        if (el.children.length === 0) {
+                            el.textContent = targetDict[baseKey];
+                        } else {
+                            // Terjemahkan text node langsung milik elemen (misal tombol dengan <i> ikon)
+                            Array.from(el.childNodes).forEach(child => {
+                                if (child.nodeType === Node.TEXT_NODE && child.nodeValue && child.nodeValue.trim()) {
+                                    const cTrim = child.nodeValue.trim();
+                                    const cKey = (lang === 'en') ? cTrim : (reverseEnToId[cTrim] || cTrim);
+                                    if (targetDict[cKey]) {
+                                        child.nodeValue = child.nodeValue.replace(cTrim, targetDict[cKey]);
+                                    } else {
+                                        child.nodeValue = translateDynamicText(child.nodeValue, lang);
+                                    }
+                                }
+                            });
+                        }
+                    } else if (el.children.length === 0) {
+                        const dyn = translateDynamicText(txt, lang);
+                        if (dyn !== txt) el.textContent = dyn;
                     }
+                });
+
+                // Translate placeholders & titles
+                document.querySelectorAll('input[placeholder], textarea[placeholder], [title]').forEach(el => {
+                    const ph = el.getAttribute('placeholder');
+                    if (ph) {
+                        const baseKey = (lang === 'en') ? ph : (reverseEnToId[ph] || ph);
+                        if (targetDict[baseKey]) {
+                            el.setAttribute('placeholder', targetDict[baseKey]);
+                        }
+                    }
+                    const ttl = el.getAttribute('title');
+                    if (ttl) {
+                        const baseKey = (lang === 'en') ? ttl : (reverseEnToId[ttl] || ttl);
+                        if (targetDict[baseKey]) {
+                            el.setAttribute('title', targetDict[baseKey]);
+                        }
+                    }
+                });
+
+                // Translate PIN label cleanly
+                const pinLabel = document.querySelector('#login-form .form-group:nth-child(2) label');
+                if (pinLabel) {
+                    pinLabel.textContent = lang === 'en' ? 'Security PIN' : 'PIN Keamanan';
                 }
-            });
 
-            // Translate placeholders
-            document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
-                const ph = el.getAttribute('placeholder');
-                if (!ph) return;
-                const baseKey = (lang === 'en') ? ph : (reverseEnToId[ph] || ph);
-                if (targetDict[baseKey]) {
-                    el.setAttribute('placeholder', targetDict[baseKey]);
+                const cmdNotice = document.getElementById('perintah-info-notice');
+                if (cmdNotice) {
+                    cmdNotice.innerHTML = lang === 'en'
+                        ? '⚠️ Red blinking alerts indicate work orders NOT YET COMPLETED. Click the row or <b>"✔️ Completed & Fill Notes"</b> button to log your work notes into History.'
+                        : '⚠️ Pemberitahuan yang berkedip merah menandakan pekerjaan BELUM DIKERJAKAN. Klik baris/tombol <b>"✔️ Dikerjakan & Isi Keterangan"</b> untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.';
                 }
-            });
 
-            // Translate PIN label cleanly without *WAJIB / *REQUIRED
-            const pinLabel = document.querySelector('#login-form .form-group:nth-child(2) label');
-            if (pinLabel) {
-                pinLabel.textContent = lang === 'en' ? 'Security PIN' : 'PIN Keamanan';
+                const bannerEl = document.getElementById('global-perintah-banner');
+                if (bannerEl) {
+                    const cnt = document.getElementById('banner-count') ? document.getElementById('banner-count').innerText : '0';
+                    bannerEl.innerHTML = lang === 'en'
+                        ? `🚨 ATTENTION! THERE ARE <span id="banner-count">${cnt}</span> NEW WORK ORDERS FROM MASTER ADMIN PENDING ACTION! CLICK HERE TO VIEW & FILL NOTES 🚨`
+                        : `🚨 PERHATIAN! ADA <span id="banner-count">${cnt}</span> PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨`;
+                }
+
+                // Terjemahkan seluruh isi tabel & modal dinamis
+                document.querySelectorAll('tbody, .modal-overlay, .dashboard-cards').forEach(container => {
+                    translateTextNodesInElement(container, lang);
+                });
+
+                // Update active state on all IN / ENG buttons
+                document.querySelectorAll('.lang-btn-id').forEach(b => b.classList.toggle('active', lang === 'id'));
+                document.querySelectorAll('.lang-btn-en').forEach(b => b.classList.toggle('active', lang === 'en'));
+                document.documentElement.lang = lang;
+            } finally {
+                _isApplyingLang = false;
             }
-
-            const cmdNotice = document.getElementById('perintah-info-notice');
-            if (cmdNotice) {
-                cmdNotice.innerHTML = lang === 'en'
-                    ? '⚠️ Red blinking alerts indicate work orders NOT YET COMPLETED. Click the row or <b>"✔️ Completed & Fill Notes"</b> button to log your work notes into History.'
-                    : '⚠️ Pemberitahuan yang berkedip merah menandakan pekerjaan BELUM DIKERJAKAN. Klik baris/tombol <b>"✔️ Dikerjakan & Isi Keterangan"</b> untuk menuliskan keterangan pekerjaan Anda dan menyimpannya ke Histori.';
-            }
-
-            const bannerEl = document.getElementById('global-perintah-banner');
-            if (bannerEl) {
-                const cnt = document.getElementById('banner-count') ? document.getElementById('banner-count').innerText : '0';
-                bannerEl.innerHTML = lang === 'en'
-                    ? `🚨 ATTENTION! THERE ARE <span id="banner-count">${cnt}</span> NEW WORK ORDERS FROM MASTER ADMIN PENDING ACTION! CLICK HERE TO VIEW & FILL NOTES 🚨`
-                    : `🚨 PERHATIAN! ADA <span id="banner-count">${cnt}</span> PERINTAH PEKERJAAN BARU DARI MASTER ADMIN YANG BELUM DIKERJAKAN! KLIK DI SINI UNTUK MELIHAT & ISI KETERANGAN 🚨`;
-            }
-
-            // Update active state on all IN / ENG buttons
-            document.querySelectorAll('.lang-btn-id').forEach(b => b.classList.toggle('active', lang === 'id'));
-            document.querySelectorAll('.lang-btn-en').forEach(b => b.classList.toggle('active', lang === 'en'));
-            document.documentElement.lang = lang;
         }
 
         function setLanguage(lang) {
@@ -6211,6 +6880,15 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => applyLanguageDOM(currentLang), 50);
+
+            // Auto-terjemahkan konten dinamis saat tabel/modal diperbarui
+            let obsTimer = null;
+            const observer = new MutationObserver(() => {
+                if (_isApplyingLang || currentLang !== 'en') return;
+                clearTimeout(obsTimer);
+                obsTimer = setTimeout(() => applyLanguageDOM('en'), 40);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
         });
 
 
@@ -6220,6 +6898,7 @@
            - Tersimpan di localStorage & sinkron lintas perangkat via Google Sheets
            ======================================================== */
         function recordAuditLog(kategori, aksi, detail) {
+            if (!isUserMasterAdmin()) return;
             const logEntry = {
                 id: Date.now() + Math.floor(Math.random() * 1000),
                 ts: Date.now(),
@@ -6431,5 +7110,78 @@
         }
 
     </script>
+<script>
+
+        const _nativeAlert = window.alert.bind(window);
+        const _nativeConfirm = window.confirm.bind(window);
+        const _enAlertMap = {
+            "Akses ditolak! Hanya Master Admin.": "Access denied! Master Admin only.",
+            "Akses Ditolak! Hanya Master Admin.": "Access Denied! Master Admin only.",
+            "Unit Mesin sudah ada dalam daftar!": "Machine Unit already exists in the list!",
+            "Satuan sudah ada dalam daftar!": "Unit already exists in the list!",
+            "Logo sistem berhasil diperbarui!": "System logo updated successfully!",
+            "Foto background halaman login berhasil diperbarui!": "Login page background photo updated successfully!",
+            "Judul & nama menu sidebar berhasil diperbarui!": "Header title & sidebar menu names updated successfully!",
+            "Pengaturan hak akses berhasil disimpan!": "Access control settings saved successfully!",
+            "Nama Pengguna dan PIN Keamanan wajib diisi!": "Username and Security PIN are required!",
+            "Akses Ditolak! Gunakan Master PIN '1234' untuk login awal.": "Access Denied! Use Master PIN '1234' for initial login.",
+            "PIN Keamanan SALAH atau Nama Pengguna tidak terdaftar!": "Incorrect Security PIN or Username not registered!",
+            "Akses Ditolak! Hanya Master Admin yang berhak mengelola Data PP.": "Access Denied! Only Master Admin can manage PR Data.",
+            "Kolom ITEM wajib diisi!": "ITEM field is required!",
+            "Tidak ada data PP untuk diekspor.": "No PR data available to export.",
+            "Harap lengkapi kolom Equipment, Issue, dan Detail Perintah Pekerjaan!": "Please complete Equipment, Issue, and Work Order Details fields!",
+            "Harap tuliskan keterangan / tindakan pekerjaan Anda terlebih dahulu!": "Please enter your work notes / actions taken first!",
+            "✔️ Berhasil dikonfirmasi DIKERJAKAN! Keterangan pekerjaan Anda sudah tersimpan di Histori.": "✔️ Confirmed COMPLETED! Your work notes have been saved to History.",
+            "Gagal menyimpan data: ": "Failed to save data: ",
+            "Nama item tidak boleh kosong!": "Item name cannot be empty!",
+            "Jumlah angka tidak valid!": "Invalid numeric amount!",
+            "Nama karyawan dan PIN Keamanan wajib diisi!": "Employee name and Security PIN are required!",
+            "Library PDF sedang dimuat.": "PDF library is loading.",
+            "Tidak ada data pada tabel untuk diunduh.": "No table data available to download.",
+            "Library Excel sedang dimuat, silakan tunggu 2 detik lalu klik ulang.": "Excel library is loading, please wait 2 seconds and click again.",
+            "Tidak ada data untuk diunduh ke Excel.": "No data available to export to Excel.",
+            "Tidak ada data histori pada tampilan ini.": "No history data in this view.",
+            "Tidak ada data spare part.": "No spare part data available.",
+            "Tidak ada data pemakaian spare part untuk diekspor.": "No spare part usage data available to export.",
+            "Tidak ada data downtime untuk diekspor.": "No downtime data available to export.",
+            "Laporan berhasil dihapus dan stok inventory telah dikembalikan!": "Report deleted and inventory stock has been restored!",
+            "Kolom Equipment dan Item Pekerjaan PM wajib diisi!": "Equipment and PM Work Item fields are required!",
+            "🗑️ Item pekerjaan berhasil dihapus.": "🗑️ Work item deleted.",
+            "Harap isi hasil pengecekan / tindakan PM terlebih dahulu!": "Please enter inspection results / PM actions first!",
+            "Tidak ada data Preventive Maintenance untuk diekspor.": "No Preventive Maintenance data available to export.",
+            "🗑️ Riwayat log aktivitas berhasil dibersihkan.": "🗑️ Activity log history cleared.",
+            "Tidak ada data riwayat aktivitas untuk diekspor.": "No activity log data available to export.",
+            "Tidak ada data riwayat aktivitas untuk dicetak.": "No activity log data available to print.",
+            "✅ Aplikasi berhasil dipasang di perangkat Anda!": "✅ App installed successfully on your device!",
+            "✅ Aplikasi ini sudah terpasang dan sedang berjalan dalam mode Aplikasi!": "✅ This app is already installed and running in App mode!"
+        };
+        const _enConfirmMap = {
+            "Hapus unit mesin ini dari master pilihan?": "Delete this machine unit from the selection list?",
+            "Hapus satuan ini dari master pilihan?": "Delete this unit from the selection list?",
+            "Hapus baris Data PP ini?": "Delete this PR Data row?",
+            "Hapus daftar perintah pekerjaan ini?": "Delete this work order item?",
+            "Hapus data karyawan": "Delete employee record",
+            "Hapus laporan ini? Stok spare part yang terpakai akan dikembalikan ke inventory.": "Delete this report? Used spare parts will be restored to inventory.",
+            "Hapus item ini?": "Delete this item?",
+            "Hapus item pekerjaan ini dari daftar master Preventive Maintenance?": "Delete this work item from the Preventive Maintenance master list?",
+            "Batalkan status selesai (reset ke Belum Dikerjakan) untuk bulan ini?": "Cancel completion status (reset to Pending) for this month?",
+            "Bersihkan seluruh riwayat log aktivitas yang tampil saat ini?": "Clear all currently displayed activity log history?"
+        };
+        function _translatePopupMsg(msg) {
+            if (typeof msg !== 'string' || currentLang !== 'en') return msg;
+            if (_enAlertMap[msg]) return _enAlertMap[msg];
+            for (const [k, v] of Object.entries(_enAlertMap)) {
+                if (msg.startsWith(k)) return msg.replace(k, v);
+            }
+            for (const [k, v] of Object.entries(_enConfirmMap)) {
+                if (msg.includes(k)) return msg.replace(k, v);
+            }
+            return translateDynamicText(msg, 'en');
+        }
+        window.alert = function(msg) { _nativeAlert(_translatePopupMsg(String(msg))); };
+        window.confirm = function(msg) { return _nativeConfirm(_translatePopupMsg(String(msg))); };
+
+</script>
 </body>
 </html>
+Processed and analyzed in code
