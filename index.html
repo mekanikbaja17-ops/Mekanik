@@ -9,6 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Sistem Operasional">
+    <link rel="icon" id="dynamic-favicon" type="image/png">
+    <link rel="apple-touch-icon" id="dynamic-apple-touch-icon">
     <link rel="manifest" id="pwa-manifest-placeholder">
 
     <!-- MODAL KONFIRMASI PENGERJAAN PREVENTIVE MAINTENANCE -->
@@ -44,12 +46,13 @@
 
     <script>
         (function setupPWA() {
-            function createPngIcon(size) {
+            function drawDefaultLogoA(size) {
                 const c = document.createElement('canvas');
                 c.width = size;
                 c.height = size;
                 const ctx = c.getContext('2d');
-                // Background rounded rect
+
+                // Background rounded square biru tua khas sistem
                 const r = size * 0.18;
                 ctx.fillStyle = '#003399';
                 ctx.beginPath();
@@ -61,52 +64,136 @@
                 ctx.closePath();
                 ctx.fill();
 
-                // Yellow gear/ring
+                // Border aksen emas tipis di bagian dalam
                 ctx.strokeStyle = '#ffc107';
-                ctx.lineWidth = size * 0.07;
+                ctx.lineWidth = Math.max(2, size * 0.035);
+                const pad = size * 0.07;
+                const rIn = size * 0.13;
                 ctx.beginPath();
-                ctx.arc(size / 2, size / 2, size * 0.28, 0, Math.PI * 2);
+                ctx.moveTo(pad + rIn, pad);
+                ctx.arcTo(size - pad, pad, size - pad, size - pad, rIn);
+                ctx.arcTo(size - pad, size - pad, pad, size - pad, rIn);
+                ctx.arcTo(pad, size - pad, pad, pad, rIn);
+                ctx.arcTo(pad, pad, size - pad, pad, rIn);
+                ctx.closePath();
                 ctx.stroke();
 
-                // White cross
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = size * 0.07;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(size / 2, size * 0.27);
-                ctx.lineTo(size / 2, size * 0.73);
-                ctx.moveTo(size * 0.27, size / 2);
-                ctx.lineTo(size * 0.73, size / 2);
-                ctx.stroke();
+                // Huruf "A" tebal presisi di tengah
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = `900 ${Math.round(size * 0.64)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText('A', size / 2, size * 0.54);
+
+                // Aksen garis kuning di bawah huruf A
+                ctx.fillStyle = '#ffc107';
+                const barW = size * 0.42;
+                const barH = Math.max(2, size * 0.055);
+                ctx.fillRect((size - barW) / 2, size * 0.80, barW, barH);
 
                 return c.toDataURL('image/png');
             }
 
-            const icon192 = createPngIcon(192);
-            const icon512 = createPngIcon(512);
-            const cleanUrl = window.location.href.split('#')[0];
+            function renderLogoToSize(imgSource, size) {
+                return new Promise((resolve) => {
+                    if (!imgSource || typeof imgSource !== 'string' || imgSource.trim() === '') {
+                        resolve(drawDefaultLogoA(size));
+                        return;
+                    }
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                        const c = document.createElement('canvas');
+                        c.width = size;
+                        c.height = size;
+                        const ctx = c.getContext('2d');
 
-            const manifestObj = {
-                id: cleanUrl,
-                name: "Sistem Operasional & Inventory",
-                short_name: "Operasional App",
-                description: "Sistem Manajemen Operasional, Maintenance & Inventory Spare Part",
-                start_url: cleanUrl,
-                scope: cleanUrl.substring(0, cleanUrl.lastIndexOf('/') + 1),
-                display: "standalone",
-                orientation: "any",
-                background_color: "#002266",
-                theme_color: "#003399",
-                icons: [
-                    { src: icon192, sizes: "192x192", type: "image/png", purpose: "any" },
-                    { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" }
-                ]
+                        // Background putih bersih dengan sudut membulat agar logo A terlihat jelas di tab browser & icon aplikasi
+                        const r = size * 0.18;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.moveTo(r, 0);
+                        ctx.arcTo(size, 0, size, size, r);
+                        ctx.arcTo(size, size, 0, size, r);
+                        ctx.arcTo(0, size, 0, 0, r);
+                        ctx.arcTo(0, 0, size, 0, r);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        const padding = size * 0.10;
+                        const avail = size - padding * 2;
+                        const scale = Math.min(avail / img.width, avail / img.height);
+                        const drawW = img.width * scale;
+                        const drawH = img.height * scale;
+                        const dx = (size - drawW) / 2;
+                        const dy = (size - drawH) / 2;
+                        ctx.drawImage(img, dx, dy, drawW, drawH);
+
+                        resolve(c.toDataURL('image/png'));
+                    };
+                    img.onerror = function() {
+                        resolve(drawDefaultLogoA(size));
+                    };
+                    img.src = imgSource;
+                });
+            }
+
+            function applyManifestAndFavicons(icon64, icon192, icon512, appTitle) {
+                const faviconEl = document.getElementById('dynamic-favicon');
+                if (faviconEl) faviconEl.setAttribute('href', icon64);
+
+                const appleIconEl = document.getElementById('dynamic-apple-touch-icon');
+                if (appleIconEl) appleIconEl.setAttribute('href', icon192);
+
+                const cleanUrl = window.location.href.split('#')[0];
+                const titleText = (appTitle && appTitle.trim()) ? appTitle.trim() : "PT.ALEXINDO PLANT 2";
+
+                const manifestObj = {
+                    id: cleanUrl,
+                    name: titleText,
+                    short_name: titleText.length > 20 ? "PT.ALEXINDO" : titleText,
+                    description: "Sistem Manajemen Operasional, Maintenance & Inventory Spare Part",
+                    start_url: cleanUrl,
+                    scope: cleanUrl.substring(0, cleanUrl.lastIndexOf('/') + 1),
+                    display: "standalone",
+                    orientation: "any",
+                    background_color: "#002266",
+                    theme_color: "#003399",
+                    icons: [
+                        { src: icon192, sizes: "192x192", type: "image/png", purpose: "any" },
+                        { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" }
+                    ]
+                };
+
+                const manifestJson = JSON.stringify(manifestObj);
+                const manifestDataUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(manifestJson);
+                const linkEl = document.getElementById('pwa-manifest-placeholder');
+                if (linkEl) linkEl.setAttribute('href', manifestDataUrl);
+            }
+
+            window.updateAppIconsAndManifest = async function(logoBase64, appTitle) {
+                const [icon64, icon192, icon512] = await Promise.all([
+                    renderLogoToSize(logoBase64, 64),
+                    renderLogoToSize(logoBase64, 192),
+                    renderLogoToSize(logoBase64, 512)
+                ]);
+                applyManifestAndFavicons(icon64, icon192, icon512, appTitle);
             };
 
-            const manifestJson = JSON.stringify(manifestObj);
-            const manifestDataUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(manifestJson);
-            const linkEl = document.getElementById('pwa-manifest-placeholder');
-            if (linkEl) linkEl.setAttribute('href', manifestDataUrl);
+            // Inisialisasi langsung saat halaman pertama kali dibuka (ambil dari cache localStorage jika logo A sudah pernah disimpan)
+            let initialLogo = "";
+            let initialTitle = "PT.ALEXINDO PLANT 2";
+            try {
+                const cachedSettings = JSON.parse(localStorage.getItem('app_master_settings') || '{}');
+                if (cachedSettings.logoBase64) initialLogo = cachedSettings.logoBase64;
+                if (cachedSettings.mainTitle) initialTitle = cachedSettings.mainTitle;
+            } catch (e) {}
+
+            // Set langsung secara sinkron terlebih dahulu agar tidak sempat muncul ikon bola dunia browser
+            applyManifestAndFavicons(drawDefaultLogoA(64), drawDefaultLogoA(192), drawDefaultLogoA(512), initialTitle);
+            if (initialLogo) {
+                window.updateAppIconsAndManifest(initialLogo, initialTitle);
+            }
 
             if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
                 const swCode = `
@@ -2154,6 +2241,10 @@
                 loginDefaultIcon.style.display = 'block';
                 sidebarLogoImg.style.display = 'none';
                 sidebarBrandH2.style.display = 'block';
+            }
+
+            if (typeof window.updateAppIconsAndManifest === 'function') {
+                window.updateAppIconsAndManifest(logoBase64, mainTitle);
             }
 
             if(document.getElementById('setting-main-title')) {
@@ -5984,4 +6075,4 @@
     </script>
 </body>
 </html>
-Analyzing
+Processed and analyzed in code
