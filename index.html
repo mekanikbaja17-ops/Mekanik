@@ -875,7 +875,6 @@
                                         <option value="PEKERJAAN" id="opt-jenis-pekerjaan">🛠️ Pekerjaan / Perbaikan</option>
                                         <option value="PENGECEKAN" id="opt-jenis-pengecekan">🔍 Pengecekan / Kontrol</option>
                                         <option value="RUTIN" id="opt-jenis-rutin">🔄 Pekerjaan Rutin / Preventive</option>
-                                        <option value="MONITORING" id=opt-jenis-monitoring">🔍 Monitoring</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1048,8 +1047,8 @@
                     <h3>
                         <span id="card-pm-title">🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn-export" onclick="exportPMExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
-                            <button class="btn-pdf" onclick="cetakPDFPM()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                            <button class="btn-export" onclick="exportPMExcel()" title="Unduh Form Prosedur Mutu PM (.xlsx)"><i class="fa-solid fa-file-excel"></i> Excel Form PM</button>
+                            <button class="btn-pdf" onclick="cetakPDFPM()" title="Cetak / Simpan PDF Form Prosedur Mutu PM"><i class="fa-solid fa-print"></i> Print / PDF Form PM</button>
                         </div>
                     </h3>
 
@@ -5864,41 +5863,544 @@
             tbody.innerHTML = html;
         }
 
-        function exportPMExcel() {
-            const selBulan = document.getElementById('pm-filter-bulan').value;
-            const selTahun = document.getElementById('pm-filter-tahun').value;
-            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
-            const rawRows = extractTableDataForPdf('pm-table-body', true);
-            if (!rawRows.length) { alert("Tidak ada data Preventive Maintenance untuk diekspor."); return; }
+        function getRoutinePMGroupedByMachine() {
+            const selBulan = document.getElementById('pm-filter-bulan')?.value || getWIBDateString().split('-')[1];
+            const selTahun = document.getElementById('pm-filter-tahun')?.value || getWIBDateString().split('-')[0];
+            const selMesin = document.getElementById('pm-filter-mesin')?.value || 'ALL';
+            const periodeKey = `${selTahun}-${selBulan}`;
+            const namaBulan = (typeof NAMA_BULAN_ID !== 'undefined' && NAMA_BULAN_ID[selBulan]) ? NAMA_BULAN_ID[selBulan] : selBulan;
+            const jenisBulan = getJenisBulan(selBulan);
 
-            generateStyledExcel({
-                title: 'JADWAL & CHECKLIST PREVENTIVE MAINTENANCE',
-                subtitle: `Periode: ${namaBulan} ${selTahun} (${getJenisBulan(selBulan)})`,
-                sheetName: `PM ${namaBulan} ${selTahun}`,
-                headers: ['No', 'Unit Mesin', 'Siklus Bulan', 'Equipment', 'Item Pekerjaan PM & Standar', 'Status Bulan Ini', 'Pelaksana & Keterangan'],
-                rows: rawRows,
-                colWidths: [6, 16, 18, 22, 38, 20, 32],
-                rowStyler: (rowData) => {
-                    const st = String(rowData[5] || '').toUpperCase();
-                    if (st.includes('SELESAI')) return { bg: 'FFD4EDDA', color: 'FF155724', bold: true };
-                    if (st.includes('BELUM')) return { bg: 'FFF8D7DA', color: 'FF721C24' };
-                    return null;
-                },
-                filename: `Preventive_Maintenance_${namaBulan}_${selTahun}.xlsx`
+            // Hanya item rutin (bukan PEKERJAAN_TAMBAHAN) yang aktif pada bulan/tahun terpilih
+            const masterList = getCombinedPMMasterList().filter(item => {
+                const siklus = String(item.siklus || 'GANJIL').toUpperCase();
+                if (siklus === 'PEKERJAAN_TAMBAHAN') return false;
+                return isPMItemActiveInPeriode(item, periodeKey, jenisBulan);
             });
+
+            const logsMap = new Map();
+            getCombinedPMLogsList().forEach(l => {
+                if (l.periode === periodeKey) logsMap.set(String(l.pmId), l);
+            });
+
+            const targetMachines = (selMesin && selMesin !== 'ALL')
+                ? [selMesin]
+                : Array.from(new Set([
+                    ...(cloudData.settings?.masterMesin || []),
+                    ...masterList.map(m => m.mesin)
+                ])).filter(Boolean);
+
+            return targetMachines.map(mesin => {
+                const items = masterList
+                    .filter(m => String(m.mesin || '').trim().toUpperCase() === String(mesin).trim().toUpperCase())
+                    .map(m => {
+                        const log = logsMap.get(String(m.id));
+                        const rawKet = log ? (log.catatan || '') : '';
+                        const tglPelaksanaanText = (log && log.tanggal) ? formatTanggalIndo(log.tanggal) : '';
+                        const keteranganWithDate = (log && (rawKet || tglPelaksanaanText))
+                            ? [rawKet, tglPelaksanaanText ? `Tgl: ${tglPelaksanaanText}` : ''].filter(Boolean).join(' | ')
+                            : '';
+                        return {
+                            id: m.id,
+                            mesin: m.mesin,
+                            equipment: m.equipment || '-',
+                            pekerjaan: m.pekerjaan || '-',
+                            standar: (m.standar && m.standar !== '-') ? m.standar : '-',
+                            statusCode: log ? 'O' : '',
+                            pelaksana: log ? (log.personel || '') : '',
+                            keterangan: keteranganWithDate,
+                            rawTanggal: log ? log.tanggal : ''
+                        };
+                    });
+
+                // Tentukan tanggal form dari log pelaksanaan terbaru pada mesin tersebut, atau default tanggal 01 bulan terpilih
+                let formDateText = `01 ${namaBulan} ${selTahun}`;
+                const loggedDates = items.map(it => it.rawTanggal).filter(Boolean).sort();
+                if (loggedDates.length > 0) {
+                    const latestYMD = normalizeDateToWIB_YMD(loggedDates[loggedDates.length - 1]);
+                    const p = latestYMD.split('-');
+                    if (p.length === 3) {
+                        const blnName = NAMA_BULAN_ID[p[1]] || p[1];
+                        formDateText = `${p[2]} ${blnName} ${p[0]}`;
+                    }
+                }
+
+                return {
+                    mesin,
+                    periodeKey,
+                    namaBulan,
+                    selTahun,
+                    jenisBulan,
+                    formDateText,
+                    items
+                };
+            }).filter(group => group.items.length > 0);
         }
 
-        function cetakPDFPM() {
-            const selBulan = document.getElementById('pm-filter-bulan').value;
-            const selTahun = document.getElementById('pm-filter-tahun').value;
-            const namaBulan = NAMA_BULAN_ID[selBulan] || selBulan;
-            generateTablePdf({
-                title: 'JADWAL & CHECKLIST PREVENTIVE MAINTENANCE',
-                periodeText: `Periode: ${namaBulan} ${selTahun} (Bulan ${getJenisBulan(selBulan)})`,
-                headers: ['No', 'Unit Mesin', 'Siklus Bulan', 'Equipment', 'Item Pekerjaan PM & Standar', 'Status Bulan Ini', 'Pelaksana & Keterangan'],
-                rows: extractTableDataForPdf('pm-table-body', true),
-                filename: `Preventive_Maintenance_${namaBulan}_${selTahun}.pdf`
+                let pendingPMPrintGroups = [];
+
+                function formatTanggalPanjangID(ymdStr) {
+                    if (!ymdStr) return "";
+                    const parts = normalizeDateToWIB_YMD(ymdStr).split('-');
+                    if (parts.length !== 3) return ymdStr;
+                    const dayNum = parseInt(parts[2], 10);
+                    const blnName = (typeof NAMA_BULAN_ID !== 'undefined' && NAMA_BULAN_ID[parts[1]]) ? NAMA_BULAN_ID[parts[1]] : parts[1];
+                    return `${dayNum} ${blnName} ${parts[0]}`;
+                }
+
+                function cetakPDFPM() {
+                    const groups = getRoutinePMGroupedByMachine();
+                    if (!groups.length) {
+                        alert('Tidak ada item Preventive Maintenance rutin pada mesin & periode yang dipilih.');
+                        return;
+                    }
+
+                    pendingPMPrintGroups = groups;
+                    const firstGroup = groups[0];
+
+                    const selMesin = document.getElementById('cetak-pm-mesin-select');
+                    const customMesin = document.getElementById('cetak-pm-mesin-custom');
+                    const daftarMesin = Array.from(new Set([
+                        ...(cloudData.settings?.masterMesin || []),
+                        ...groups.map(g => g.mesin)
+                    ])).filter(Boolean);
+
+                    selMesin.innerHTML = daftarMesin.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+                    selMesin.value = firstGroup.mesin || (daftarMesin[0] || '');
+                    customMesin.value = firstGroup.mesin || '';
+
+                    const selBulan = document.getElementById('pm-filter-bulan')?.value || getWIBDateString().split('-')[1];
+                    const selTahun = document.getElementById('pm-filter-tahun')?.value || getWIBDateString().split('-')[0];
+                    const todayYMD = getWIBDateString();
+                    const defaultPickerYMD = todayYMD.startsWith(`${selTahun}-${selBulan}`) ? todayYMD : `${selTahun}-${selBulan}-01`;
+
+                    document.getElementById('cetak-pm-tanggal-picker').value = defaultPickerYMD;
+                    document.getElementById('cetak-pm-tanggal-teks').value = firstGroup.formDateText || formatTanggalPanjangID(defaultPickerYMD);
+
+                    document.getElementById('modal-cetak-pm').style.display = 'flex';
+                }
+
+                function tutupModalCetakPM() {
+                    document.getElementById('modal-cetak-pm').style.display = 'none';
+                }
+
+                function syncCetakPMMesinSelect() {
+                    const selVal = document.getElementById('cetak-pm-mesin-select').value;
+                    if (selVal) {
+                        document.getElementById('cetak-pm-mesin-custom').value = selVal;
+                    }
+                }
+
+                function syncCetakPMTanggalPicker() {
+                    const pickerVal = document.getElementById('cetak-pm-tanggal-picker').value;
+                    if (pickerVal) {
+                        document.getElementById('cetak-pm-tanggal-teks').value = formatTanggalPanjangID(pickerVal);
+                    }
+                }
+
+                function prosesEksekusiCetakPM() {
+                    if (!pendingPMPrintGroups.length) {
+                        tutupModalCetakPM();
+                        return;
+                    }
+
+                    const customMesin = document.getElementById('cetak-pm-mesin-custom').value.trim();
+                    const selectMesin = document.getElementById('cetak-pm-mesin-select').value.trim();
+                    const chosenMesin = customMesin || selectMesin;
+
+                    const customTanggalTeks = document.getElementById('cetak-pm-tanggal-teks').value.trim();
+                    const pickerTanggal = document.getElementById('cetak-pm-tanggal-picker').value;
+                    const chosenTanggal = customTanggalTeks || (pickerTanggal ? formatTanggalPanjangID(pickerTanggal) : '');
+
+                    const groupsToRender = pendingPMPrintGroups.map((g, idx) => ({
+                        ...g,
+                        mesin: (pendingPMPrintGroups.length === 1 || idx === 0) ? (chosenMesin || g.mesin) : g.mesin,
+                        formDateText: chosenTanggal || g.formDateText
+                    }));
+
+                    tutupModalCetakPM();
+
+                    const companyName = cloudData.settings?.mainTitle || 'PT. ALEXINDO PLANT 2';
+                    const logoSrc = cloudData.settings?.logoBase64 || '';
+
+                    const htmlSheets = groupsToRender.map(g => {
+                        const rowsHtml = g.items.map((it, idx) => {
+                            const standarLines = String(it.standar || '-')
+                                .split(/\r?\n|\s*;\s*/)
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                            const standarHtml = standarLines.length > 1
+                                ? standarLines.map(line => `<div style="padding:2px 0; border-bottom:1px dashed #999;">${escapeHtml(line)}</div>`).join('')
+                                : escapeHtml(it.standar);
+
+                            return `
+                                <tr>
+                                    <td style="text-align:center; vertical-align:middle; width:34px; font-weight:bold;">${idx + 1}</td>
+                                    <td style="width:18%; text-align:center; vertical-align:middle;"><strong>${escapeHtml(it.equipment)}</strong></td>
+                                    <td style="width:21%; vertical-align:middle;">${escapeHtml(it.pekerjaan)}</td>
+                                    <td style="width:31%; vertical-align:middle;">${standarHtml}</td>
+                                    <td style="text-align:center; vertical-align:middle; width:58px; font-weight:bold; font-size:12px;">${escapeHtml(it.statusCode)}</td>
+                                    <td style="width:13%; text-align:center; vertical-align:middle;">${escapeHtml(it.pelaksana)}</td>
+                                    <td style="width:14%; vertical-align:middle;">${escapeHtml(it.keterangan)}</td>
+                                </tr>
+                            `;
+                        }).join('');
+
+                        const logoCell = logoSrc
+                            ? `<img src="${escapeHtml(logoSrc)}" alt="Logo" style="width:100%; height:100%; max-width:155px; max-height:76px; object-fit:contain; display:block; margin:auto;">`
+                            : `<strong style="font-size:15px; color:#003399; letter-spacing:0.5px;">${escapeHtml(companyName)}</strong>`;
+
+                        return `
+                            <section class="pm-quality-form">
+                                <table class="pm-q-table" style="margin-bottom:0;">
+                                    <tr>
+                                        <td rowspan="3" style="width:165px; text-align:center; background:#fff;">${logoCell}</td>
+                                        <td rowspan="2" style="text-align:center; font-weight:bold; font-size:15px;">${escapeHtml(companyName)}</td>
+                                        <td style="width:90px; text-align:center; font-weight:bold;">Dibuat</td>
+                                        <td style="width:90px; text-align:center; font-weight:bold;">Disetujui</td>
+                                        <td style="width:105px; text-align:center; font-weight:bold;">Tanggal</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align:center;">Ka.Bag</td>
+                                        <td style="text-align:center;">FM</td>
+                                        <td style="text-align:center;">10/11/2021</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align:center; font-weight:bold; font-size:13px;">PROSEDUR MUTU</td>
+                                        <td style="text-align:center; font-weight:bold;">Revisi</td>
+                                        <td colspan="2" style="text-align:center; font-weight:bold;">NO DOKUMEN</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align:center; font-weight:bold;"></td>
+                                        <td style="text-align:center; font-weight:bold;">CHECK LIST PERAWATAN MESIN DAN PERALATAN BULANAN</td>
+                                        <td style="text-align:center; font-weight:bold;">0</td>
+                                        <td colspan="2" style="text-align:center; font-weight:bold;">PM-SM-7.1.6/F4</td>
+                                    </tr>
+                                </table>
+
+                                <div class="pm-q-title-bar">CHECK LIST PERAWATAN MESIN DAN PERAWATAN BULANAN</div>
+                                <div class="pm-q-meta-bar">
+                                    <div>Nama Mesin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${escapeHtml(g.mesin)}</div>
+                                    <div>Tanggal : ${escapeHtml(g.formDateText)}</div>
+                                </div>
+
+                                <table class="pm-q-table" style="margin-top:0;">
+                                    <thead>
+                                        <tr style="background:#f8fafc;">
+                                            <th style="width:34px; text-align:center;">No</th>
+                                            <th style="text-align:center;">NAMA MESIN DAN PERALATAN</th>
+                                            <th style="text-align:center;">AKTIVITAS PERAWATAN</th>
+                                            <th style="text-align:center;">STANDAR PENGECEKAN</th>
+                                            <th style="width:58px; text-align:center;">STATUS</th>
+                                            <th style="text-align:center;">PELAKSANA</th>
+                                            <th style="text-align:center;">KETERANGAN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rowsHtml}</tbody>
+                                </table>
+
+                                <div class="pm-q-footer-grid">
+                                    <div class="pm-q-footer-note">
+                                        <div style="text-decoration:underline; font-weight:bold; margin-bottom:2px;">Keterangan :</div>
+                                        <div>Tulis di kolom status : <b>O</b> = Jika kondisi Oke</div>
+                                        <div style="padding-left:83px;"><b>X</b> = Jika kondisi tidak Oke dan tulis di kolom keterangan kenapa tidak Oke</div>
+                                    </div>
+                                    <div class="pm-q-sign-box">
+                                        <div class="pm-q-sign-head">Diperiksa</div>
+                                        <div class="pm-q-sign-space"></div>
+                                        <div class="pm-q-sign-name">Koordinator Shift</div>
+                                    </div>
+                                    <div class="pm-q-sign-box">
+                                        <div class="pm-q-sign-head">Diketahui</div>
+                                        <div class="pm-q-sign-space"></div>
+                                        <div class="pm-q-sign-name">Kepala Bagian Mekanik</div>
+                                    </div>
+                                </div>
+                                <div class="pm-q-bottom-left">${escapeHtml(g.jenisBulan === 'GENAP' ? 'bln genap' : 'bln ganjil')}</div>
+                            </section>
+                        `;
+                    }).join('');
+
+                    const container = document.getElementById('pm-print-sheet-container');
+                    container.innerHTML = htmlSheets;
+                    container.style.display = 'block';
+
+                    setTimeout(() => {
+                        window.print();
+                        setTimeout(() => {
+                            container.style.display = 'none';
+                        }, 600);
+                    }, 150);
+                }
+
+        async function exportPMExcel() {
+            if (typeof ExcelJS === 'undefined') {
+                alert('Library Excel sedang dimuat, silakan tunggu sebentar lalu coba lagi.');
+                return;
+            }
+            const groups = getRoutinePMGroupedByMachine();
+            if (!groups.length) {
+                alert('Tidak ada item Preventive Maintenance rutin pada mesin & periode yang dipilih.');
+                return;
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const companyName = cloudData.settings?.mainTitle || 'PT. ALEXINDO PLANT 2';
+            const logoSrc = cloudData.settings?.logoBase64 || '';
+
+            let logoImageId = null;
+            if (logoSrc && logoSrc.startsWith('data:image/')) {
+                try {
+                    const extMatch = logoSrc.match(/^data:image\/(png|jpeg|jpg);base64,/i);
+                    const ext = extMatch ? (extMatch[1].toLowerCase() === 'jpg' ? 'jpeg' : extMatch[1].toLowerCase()) : 'png';
+                    logoImageId = workbook.addImage({
+                        base64: logoSrc,
+                        extension: ext
+                    });
+                } catch (e) {
+                    logoImageId = null;
+                }
+            }
+
+            const borderThin = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+            const borderMedium = {
+                top: { style: 'medium', color: { argb: 'FF000000' } },
+                left: { style: 'medium', color: { argb: 'FF000000' } },
+                bottom: { style: 'medium', color: { argb: 'FF000000' } },
+                right: { style: 'medium', color: { argb: 'FF000000' } }
+            };
+
+            const usedSheetNames = new Set();
+            groups.forEach((g, gIdx) => {
+                let baseSheetName = `${g.mesin}`.replace(/[\\/*?:[\]]/g, '').trim().slice(0, 26) || `Mesin_${gIdx + 1}`;
+                let cleanSheetName = baseSheetName;
+                let counter = 2;
+                while (usedSheetNames.has(cleanSheetName.toLowerCase())) {
+                    cleanSheetName = `${baseSheetName.slice(0, 24)}_${counter++}`;
+                }
+                usedSheetNames.add(cleanSheetName.toLowerCase());
+
+                const ws = workbook.addWorksheet(cleanSheetName);
+
+                // KOP PROSEDUR MUTU (Baris 2 - 5, Kolom A - G)
+                ws.mergeCells('A2:B5');
+                ws.mergeCells('C2:D3');
+                ws.mergeCells('C4:D4');
+                ws.mergeCells('C5:D5');
+                ws.mergeCells('F4:G4');
+                ws.mergeCells('F5:G5');
+
+                ws.getCell('C2').value = companyName;
+                ws.getCell('C2').font = { name: 'Calibri', size: 14, bold: true };
+                ws.getCell('C2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell('E2').value = 'Dibuat';
+                ws.getCell('F2').value = 'Disetujui';
+                ws.getCell('G2').value = 'Tanggal';
+                ['E2', 'F2', 'G2'].forEach(ref => {
+                    ws.getCell(ref).font = { name: 'Calibri', size: 10, bold: true };
+                    ws.getCell(ref).alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+
+                ws.getCell('E3').value = 'Ka.Bag';
+                ws.getCell('F3').value = 'FM';
+                ws.getCell('G3').value = '10/11/2021';
+                ['E3', 'F3', 'G3'].forEach(ref => {
+                    ws.getCell(ref).font = { name: 'Calibri', size: 10 };
+                    ws.getCell(ref).alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+
+                ws.getCell('C4').value = 'PROSEDUR MUTU';
+                ws.getCell('C4').font = { name: 'Calibri', size: 12, bold: true };
+                ws.getCell('C4').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell('E4').value = 'Revisi';
+                ws.getCell('E4').font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell('E4').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell('F4').value = 'NO DOKUMEN';
+                ws.getCell('F4').font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell('F4').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell('C5').value = 'CHECK LIST PERAWATAN MESIN DAN PERALATAN BULANAN';
+                ws.getCell('C5').font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell('C5').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+                ws.getCell('E5').value = '0';
+                ws.getCell('E5').font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell('E5').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell('F5').value = 'PM-SM-7.1.6/F4';
+                ws.getCell('F5').font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell('F5').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                for (let r = 2; r <= 5; r++) {
+                    ws.getRow(r).height = 20;
+                    for (let c = 1; c <= 7; c++) {
+                        ws.getCell(r, c).border = borderThin;
+                    }
+                }
+
+                if (logoImageId !== null) {
+                    ws.addImage(logoImageId, {
+                        tl: { col: 0.12, row: 1.12 },
+                        ext: { width: 155, height: 82 }
+                    });
+                } else {
+                    ws.getCell('A2').value = companyName;
+                    ws.getCell('A2').font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FF003399' } };
+                    ws.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                }
+
+                // Judul Form (Baris 7)
+                ws.mergeCells('A7:G7');
+                ws.getCell('A7').value = 'CHECK LIST PERAWATAN MESIN DAN PERAWATAN BULANAN';
+                ws.getCell('A7').font = { name: 'Calibri', size: 13, bold: true };
+                ws.getCell('A7').alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(7).height = 24;
+
+                // Info Nama Mesin & Tanggal (Baris 9)
+                ws.mergeCells('A9:D9');
+                ws.getCell('A9').value = `Nama Mesin      : ${g.mesin}`;
+                ws.getCell('A9').font = { name: 'Calibri', size: 11, bold: true };
+                ws.getCell('A9').alignment = { horizontal: 'left', vertical: 'middle' };
+
+                ws.mergeCells('E9:G9');
+                ws.getCell('E9').value = `Tanggal : ${g.formDateText}`;
+                ws.getCell('E9').font = { name: 'Calibri', size: 11, bold: true };
+                ws.getCell('E9').alignment = { horizontal: 'right', vertical: 'middle' };
+                ws.getRow(9).height = 22;
+
+                // Header Tabel (Baris 11)
+                const headerRow = ws.getRow(11);
+                headerRow.values = ['No', 'NAMA MESIN DAN PERALATAN', 'AKTIVITAS PERAWATAN', 'STANDAR PENGECEKAN', 'STATUS', 'PELAKSANA', 'KETERANGAN'];
+                headerRow.height = 24;
+                headerRow.eachCell((cell) => {
+                    cell.font = { name: 'Calibri', size: 10, bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                    cell.border = borderMedium;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                });
+
+                // Isi Baris Item Rutin Dinamis (6, 8, 10, dst.)
+                g.items.forEach((it, idx) => {
+                    const standarFormatted = String(it.standar || '-')
+                        .split(/\r?\n|\s*;\s*/)
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .join('\n');
+
+                    const row = ws.addRow([
+                        idx + 1,
+                        it.equipment,
+                        it.pekerjaan,
+                        standarFormatted,
+                        it.statusCode,
+                        it.pelaksana,
+                        it.keterangan
+                    ]);
+
+                    const lineCount = Math.max(1, standarFormatted.split('\n').length);
+                    row.height = Math.max(24, lineCount * 17);
+
+                    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+                        cell.font = { name: 'Calibri', size: 10, bold: (colNum === 5) };
+                        cell.border = borderThin;
+                        cell.alignment = {
+                            horizontal: (colNum === 1 || colNum === 5 || colNum === 6) ? 'center' : 'left',
+                            vertical: 'middle',
+                            wrapText: true
+                        };
+                    });
+                });
+
+                // Footer Keterangan & Blok Tanda Tangan Dinamis di bawah baris terakhir
+                const footerStart = ws.lastRow.number + 2;
+
+                ws.mergeCells(`A${footerStart}:D${footerStart}`);
+                ws.getCell(`A${footerStart}`).value = 'Keterangan :';
+                ws.getCell(`A${footerStart}`).font = { name: 'Calibri', size: 10, bold: true, underline: true };
+
+                ws.mergeCells(`A${footerStart + 1}:D${footerStart + 1}`);
+                ws.getCell(`A${footerStart + 1}`).value = 'Tulis di kolom status :  O  = Jika kondisi Oke';
+                ws.getCell(`A${footerStart + 1}`).font = { name: 'Calibri', size: 10 };
+
+                ws.mergeCells(`A${footerStart + 2}:D${footerStart + 2}`);
+                ws.getCell(`A${footerStart + 2}`).value = '                                  X  = Jika kondisi tidak Oke dan tulis di kolom keterangan kenapa tidak Oke';
+                ws.getCell(`A${footerStart + 2}`).font = { name: 'Calibri', size: 10 };
+
+                ws.getCell(`A${footerStart + 4}`).value = g.jenisBulan === 'GENAP' ? 'bln genap' : 'bln ganjil';
+                ws.getCell(`A${footerStart + 4}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                // Kotak Diperiksa (Kolom E-F) & Diketahui (Kolom G)
+                ws.mergeCells(`E${footerStart}:F${footerStart}`);
+                ws.getCell(`E${footerStart}`).value = 'Diperiksa';
+                ws.getCell(`E${footerStart}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`E${footerStart}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell(`G${footerStart}`).value = 'Diketahui';
+                ws.getCell(`G${footerStart}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`G${footerStart}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.mergeCells(`E${footerStart + 1}:F${footerStart + 2}`);
+                ws.mergeCells(`G${footerStart + 1}:G${footerStart + 2}`);
+
+                ws.mergeCells(`E${footerStart + 3}:F${footerStart + 3}`);
+                ws.getCell(`E${footerStart + 3}`).value = 'Koordinator Shift';
+                ws.getCell(`E${footerStart + 3}`).font = { name: 'Calibri', size: 10, italic: true };
+                ws.getCell(`E${footerStart + 3}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.getCell(`G${footerStart + 3}`).value = 'Kepala Bagian Mekanik';
+                ws.getCell(`G${footerStart + 3}`).font = { name: 'Calibri', size: 10, italic: true };
+                ws.getCell(`G${footerStart + 3}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                for (let r = footerStart; r <= footerStart + 3; r++) {
+                    for (let c = 5; c <= 7; c++) {
+                        ws.getCell(r, c).border = borderThin;
+                    }
+                }
+
+                ws.columns = [
+                    { width: 6 },
+                    { width: 25 },
+                    { width: 27 },
+                    { width: 44 },
+                    { width: 10 },
+                    { width: 18 },
+                    { width: 25 }
+                ];
+
+                ws.pageSetup = {
+                    paperSize: 9,
+                    orientation: 'landscape',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0
+                };
             });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const firstGroup = groups[0];
+            const fileMesin = (groups.length === 1) ? firstGroup.mesin.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Semua_Mesin';
+            const filename = `Checklist_PM_${fileMesin}_${firstGroup.namaBulan}_${firstGroup.selTahun}.xlsx`;
+            if (typeof saveAs !== 'undefined') {
+                saveAs(blob, filename);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
         }
 
         /* ========================================================
@@ -7250,6 +7752,192 @@
         window.confirm = function(msg) { return _nativeConfirm(_translatePopupMsg(String(msg))); };
 
 </script>
+
+    <!-- TEMPLATE CETAK FORM PM PROSEDUR MUTU (PM-SM-7.1.6/F4) -->
+    <div id="pm-print-sheet-container" style="display:none;"></div>
+    <style id="pm-form-print-style">
+        .pm-quality-form {
+            page-break-after: always;
+            break-after: page;
+            padding: 8px 12px;
+            color: #000;
+            background: #fff;
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 11px;
+        }
+        .pm-quality-form:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+        .pm-q-table {
+            width: 100% !important;
+            min-width: 0 !important;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+        }
+        .pm-q-table th, .pm-q-table td {
+            border: 1.5px solid #000 !important;
+            padding: 4px 6px;
+            color: #000;
+            vertical-align: middle;
+        }
+        .pm-q-title-bar {
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            padding: 5px;
+            border: 1.5px solid #000;
+            border-bottom: none;
+            margin-top: 6px;
+        }
+        .pm-q-meta-bar {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 5px 8px;
+            border: 1.5px solid #000;
+            border-bottom: none;
+        }
+        .pm-q-footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            border: 1.5px solid #000;
+            margin-top: 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .pm-q-footer-note {
+            padding: 6px 8px;
+            font-size: 10px;
+            border-right: 1.5px solid #000;
+            line-height: 1.45;
+        }
+        .pm-q-sign-box {
+            text-align: center;
+            font-size: 10.5px;
+            border-right: 1.5px solid #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .pm-q-sign-box:last-child {
+            border-right: none;
+        }
+        .pm-q-sign-head {
+            border-bottom: 1px solid #000;
+            padding: 3px 6px;
+            font-weight: bold;
+        }
+        .pm-q-sign-space {
+            height: 44px;
+        }
+        .pm-q-sign-name {
+            padding: 3px 6px;
+            font-style: italic;
+            border-top: 1px solid #000;
+        }
+
+        @media print {
+            body, #app-container, .main-wrapper, .content-body {
+                height: auto !important;
+                overflow: visible !important;
+                background: #fff !important;
+            }
+            #login-container, .sidebar, .mobile-header-bar, .sidebar-overlay,
+            header, .system-footer, .scroll-controls, #global-perintah-banner,
+            .modal-overlay, .content-body > .card {
+                display: none !important;
+            }
+            #pm-print-sheet-container {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+        }
+    
+        /* Perataan tengah untuk kolom No dan kolom di sampingnya pada tabel PM */
+        #pm-table-body td:nth-child(1),
+        #pm-table-body td:nth-child(2),
+        #pm-table-body td:nth-child(3),
+        #pm-table-body td:nth-child(6),
+        #tab-preventive thead th:nth-child(1),
+        #tab-preventive thead th:nth-child(2),
+        #tab-preventive thead th:nth-child(3),
+        #tab-preventive thead th:nth-child(6) {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        /* Perataan tengah pada lembar cetak form PM */
+        .pm-quality-form .pm-q-table th:nth-child(1),
+        .pm-quality-form .pm-q-table th:nth-child(5),
+        .pm-quality-form .pm-q-table th:nth-child(6),
+        .pm-quality-form .pm-q-table td:nth-child(1),
+        .pm-quality-form .pm-q-table td:nth-child(2),
+        .pm-quality-form .pm-q-table td:nth-child(5),
+        .pm-quality-form .pm-q-table td:nth-child(6) {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        .pm-quality-form .pm-q-table:first-of-type tr:first-child td:first-child {
+            padding: 4px !important;
+            height: 82px;
+        }
+        .pm-quality-form .pm-q-table:first-of-type tr:first-child td:first-child img {
+            width: 100%;
+            height: 100%;
+            max-width: 156px;
+            max-height: 76px;
+            object-fit: contain;
+        }
+        .pm-q-bottom-left {
+            text-align: left;
+            font-weight: bold;
+            font-size: 11px;
+            margin-top: 6px;
+            padding-left: 2px;
+        }
+</style>
+
+    <!-- MODAL PENGATURAN SEBELUM CETAK PDF / PRINT PREVENTIVE MAINTENANCE -->
+    <div id="modal-cetak-pm" class="modal-overlay">
+        <div class="modal-box" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>🖨️ Pengaturan Sebelum Cetak Form PM</h3>
+                <button class="modal-close-btn" onclick="tutupModalCetakPM()">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label>Nama Mesin (Tampil di Atas Kolom)</label>
+                <select id="cetak-pm-mesin-select" onchange="syncCetakPMMesinSelect()" style="margin-bottom: 6px; font-weight: bold;"></select>
+                <input type="text" id="cetak-pm-mesin-custom" placeholder="Atau ketik nama mesin manual di sini...">
+            </div>
+
+            <div class="form-group">
+                <label>Tanggal Cetak / Tanggal Form (Tampil di Atas Kolom)</label>
+                <input type="date" id="cetak-pm-tanggal-picker" onchange="syncCetakPMTanggalPicker()" style="margin-bottom: 6px; font-weight: bold;">
+                <input type="text" id="cetak-pm-tanggal-teks" placeholder="Contoh: 22 November 2026 atau 22/11/2026">
+            </div>
+
+            <div style="background:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:11px; color:#334155;">
+                ℹ️ Kamu bisa mengubah <b>Nama Mesin</b> maupun <b>Tanggal</b> sebelum mencetak. Kosongkan teks manual jika ingin mengikuti pilihan dropdown / tanggal kalender.
+            </div>
+
+            <div class="modal-footer-btns">
+                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalCetakPM()">Batal</button>
+                <button type="button" class="btn-pdf" style="padding:10px 16px;" onclick="prosesEksekusiCetakPM()">
+                    <i class="fa-solid fa-print"></i> Cetak Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
 Analyzing
