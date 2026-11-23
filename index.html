@@ -6020,117 +6020,195 @@
 
                     tutupModalCetakPM();
 
-                    const companyName = cloudData.settings?.mainTitle || 'PT. ALEXINDO PLANT 2';
+                    if (!window.jspdf || !window.jspdf.jsPDF) {
+                        alert("Library PDF sedang dimuat, silakan tunggu sebentar lalu coba lagi.");
+                        return;
+                    }
+
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                    const companyName = cleanTextForPdf(cloudData.settings?.mainTitle || 'PT. ALEXINDO PLANT 2');
                     const logoSrc = cloudData.settings?.logoBase64 || '';
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const marginX = 10;
+                    const usableW = pageWidth - marginX * 2;
 
-                    const htmlSheets = groupsToRender.map(g => {
-                        const rowsHtml = g.items.map((it, idx) => {
-                            const standarLines = String(it.standar || '-')
-                                .split(/\r?\n|\s*;\s*/)
-                                .map(s => s.trim())
-                                .filter(Boolean);
-                            const standarHtml = standarLines.length > 1
-                                ? standarLines.map(line => `<div style="padding:2px 0; border-bottom:1px dashed #999;">${escapeHtml(line)}</div>`).join('')
-                                : escapeHtml(it.standar);
+                    groupsToRender.forEach((g, gIdx) => {
+                        if (gIdx > 0) doc.addPage('a4', 'landscape');
 
-                            return `
-                                <tr>
-                                    <td style="text-align:center; vertical-align:middle; width:34px; font-weight:bold;">${idx + 1}</td>
-                                    <td style="width:18%; text-align:center; vertical-align:middle;"><strong>${escapeHtml(it.equipment)}</strong></td>
-                                    <td style="width:21%; vertical-align:middle;">${escapeHtml(it.pekerjaan)}</td>
-                                    <td style="width:31%; vertical-align:middle;">${standarHtml}</td>
-                                    <td style="text-align:center; vertical-align:middle; width:58px; font-weight:bold; font-size:12px;">${escapeHtml(it.statusCode)}</td>
-                                    <td style="width:13%; text-align:center; vertical-align:middle;">${escapeHtml(it.pelaksana)}</td>
-                                    <td style="width:14%; vertical-align:middle;">${escapeHtml(it.keterangan)}</td>
-                                </tr>
-                            `;
-                        }).join('');
+                        const topY = 10;
+                        const logoW = 46;
+                        const rightW = 76;
+                        const midW = usableW - logoW - rightW;
 
-                        const logoCell = logoSrc
-                            ? `<img src="${escapeHtml(logoSrc)}" alt="Logo" style="width:100%; height:100%; max-width:155px; max-height:76px; object-fit:contain; display:block; margin:auto;">`
-                            : `<strong style="font-size:15px; color:#003399; letter-spacing:0.5px;">${escapeHtml(companyName)}</strong>`;
+                        doc.setDrawColor(0, 0, 0);
+                        doc.setLineWidth(0.35);
 
-                        return `
-                            <section class="pm-quality-form">
-                                <table class="pm-q-table" style="margin-bottom:0;">
-                                    <tr>
-                                        <td rowspan="3" style="width:165px; text-align:center; background:#fff;">${logoCell}</td>
-                                        <td rowspan="2" style="text-align:center; font-weight:bold; font-size:15px;">${escapeHtml(companyName)}</td>
-                                        <td style="width:90px; text-align:center; font-weight:bold;">Dibuat</td>
-                                        <td style="width:90px; text-align:center; font-weight:bold;">Disetujui</td>
-                                        <td style="width:105px; text-align:center; font-weight:bold;">Tanggal</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="text-align:center;">Ka.Bag</td>
-                                        <td style="text-align:center;">FM</td>
-                                        <td style="text-align:center;">10/11/2021</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="text-align:center; font-weight:bold; font-size:13px;">PROSEDUR MUTU</td>
-                                        <td style="text-align:center; font-weight:bold;">Revisi</td>
-                                        <td colspan="2" style="text-align:center; font-weight:bold;">NO DOKUMEN</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="text-align:center; font-weight:bold;"></td>
-                                        <td style="text-align:center; font-weight:bold;">CHECK LIST PERAWATAN MESIN DAN PERALATAN BULANAN</td>
-                                        <td style="text-align:center; font-weight:bold;">0</td>
-                                        <td colspan="2" style="text-align:center; font-weight:bold;">PM-SM-7.1.6/F4</td>
-                                    </tr>
-                                </table>
+                        // Kotak Logo (Full tinggi 4 baris tanpa garis potong di bawah logo)
+                        doc.rect(marginX, topY, logoW, 24);
+                        if (logoSrc && logoSrc.startsWith('data:image/')) {
+                            try {
+                                const fmt = logoSrc.includes('image/jpeg') || logoSrc.includes('image/jpg') ? 'JPEG' : 'PNG';
+                                doc.addImage(logoSrc, fmt, marginX + 5, topY + 2, logoW - 10, 20, undefined, 'FAST');
+                            } catch (e) {
+                                doc.setFont("helvetica", "bold");
+                                doc.setFontSize(10);
+                                doc.text(companyName, marginX + logoW / 2, topY + 13, { align: 'center' });
+                            }
+                        } else {
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(10);
+                            doc.text(companyName, marginX + logoW / 2, topY + 13, { align: 'center' });
+                        }
 
-                                <div class="pm-q-title-bar">CHECK LIST PERAWATAN MESIN DAN PERAWATAN BULANAN</div>
-                                <div class="pm-q-meta-bar">
-                                    <div>Nama Mesin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${escapeHtml(g.mesin)}</div>
-                                    <div>Tanggal : ${escapeHtml(g.formDateText)}</div>
-                                </div>
+                        // Kolom Tengah Kop
+                        const midX = marginX + logoW;
+                        doc.rect(midX, topY, midW, 12);
+                        doc.rect(midX, topY + 12, midW, 6);
+                        doc.rect(midX, topY + 18, midW, 6);
 
-                                <table class="pm-q-table" style="margin-top:0;">
-                                    <thead>
-                                        <tr style="background:#f8fafc;">
-                                            <th style="width:34px; text-align:center;">No</th>
-                                            <th style="text-align:center;">NAMA MESIN DAN PERALATAN</th>
-                                            <th style="text-align:center;">AKTIVITAS PERAWATAN</th>
-                                            <th style="text-align:center;">STANDAR PENGECEKAN</th>
-                                            <th style="width:58px; text-align:center;">STATUS</th>
-                                            <th style="text-align:center;">PELAKSANA</th>
-                                            <th style="text-align:center;">KETERANGAN</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>${rowsHtml}</tbody>
-                                </table>
+                        doc.setFont("helvetica", "bold");
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFontSize(12);
+                        doc.text(companyName, midX + midW / 2, topY + 7.5, { align: 'center' });
+                        doc.setFontSize(10);
+                        doc.text("PROSEDUR MUTU", midX + midW / 2, topY + 16, { align: 'center' });
+                        doc.setFontSize(8.5);
+                        doc.text("CHECK LIST PERAWATAN MESIN DAN PERALATAN BULANAN", midX + midW / 2, topY + 22, { align: 'center' });
 
-                                <div class="pm-q-footer-grid">
-                                    <div class="pm-q-footer-note">
-                                        <div style="text-decoration:underline; font-weight:bold; margin-bottom:2px;">Keterangan :</div>
-                                        <div>Tulis di kolom status : <b>O</b> = Jika kondisi Oke</div>
-                                        <div style="padding-left:83px;"><b>X</b> = Jika kondisi tidak Oke dan tulis di kolom keterangan kenapa tidak Oke</div>
-                                    </div>
-                                    <div class="pm-q-sign-box">
-                                        <div class="pm-q-sign-head">Diperiksa</div>
-                                        <div class="pm-q-sign-space"></div>
-                                        <div class="pm-q-sign-name">Koordinator Shift</div>
-                                    </div>
-                                    <div class="pm-q-sign-box">
-                                        <div class="pm-q-sign-head">Diketahui</div>
-                                        <div class="pm-q-sign-space"></div>
-                                        <div class="pm-q-sign-name">Kepala Bagian Mekanik</div>
-                                    </div>
-                                </div>
-                                <div class="pm-q-bottom-left">${escapeHtml(g.jenisBulan === 'GENAP' ? 'bln genap' : 'bln ganjil')}</div>
-                            </section>
-                        `;
-                    }).join('');
+                        // Kolom Kanan Kop
+                        const rX = midX + midW;
+                        const c1 = 23, c2 = 25, c3 = rightW - c1 - c2;
+                        doc.rect(rX, topY, c1, 6);
+                        doc.rect(rX + c1, topY, c2, 6);
+                        doc.rect(rX + c1 + c2, topY, c3, 6);
 
-                    const container = document.getElementById('pm-print-sheet-container');
-                    container.innerHTML = htmlSheets;
-                    container.style.display = 'block';
+                        doc.rect(rX, topY + 6, c1, 6);
+                        doc.rect(rX + c1, topY + 6, c2, 6);
+                        doc.rect(rX + c1 + c2, topY + 6, c3, 6);
 
-                    setTimeout(() => {
-                        window.print();
-                        setTimeout(() => {
-                            container.style.display = 'none';
-                        }, 600);
-                    }, 150);
+                        doc.rect(rX, topY + 12, c1, 6);
+                        doc.rect(rX + c1, topY + 12, c2 + c3, 6);
+
+                        doc.rect(rX, topY + 18, c1, 6);
+                        doc.rect(rX + c1, topY + 18, c2 + c3, 6);
+
+                        doc.setFontSize(8);
+                        doc.text("Dibuat", rX + c1 / 2, topY + 4, { align: 'center' });
+                        doc.text("Disetujui", rX + c1 + c2 / 2, topY + 4, { align: 'center' });
+                        doc.text("Tanggal", rX + c1 + c2 + c3 / 2, topY + 4, { align: 'center' });
+
+                        doc.setFont("helvetica", "normal");
+                        doc.text("Ka.Bag", rX + c1 / 2, topY + 10, { align: 'center' });
+                        doc.text("FM", rX + c1 + c2 / 2, topY + 10, { align: 'center' });
+                        doc.text("10/11/2021", rX + c1 + c2 + c3 / 2, topY + 10, { align: 'center' });
+
+                        doc.setFont("helvetica", "bold");
+                        doc.text("Revisi", rX + c1 / 2, topY + 16, { align: 'center' });
+                        doc.text("NO DOKUMEN", rX + c1 + (c2 + c3) / 2, topY + 16, { align: 'center' });
+                        doc.text("0", rX + c1 / 2, topY + 22, { align: 'center' });
+                        doc.text("PM-SM-7.1.6/F4", rX + c1 + (c2 + c3) / 2, topY + 22, { align: 'center' });
+
+                        // Judul & Info Mesin/Tanggal
+                        const titleY = topY + 26;
+                        doc.rect(marginX, titleY, usableW, 6.5);
+                        doc.setFontSize(10);
+                        doc.text("CHECK LIST PERAWATAN MESIN DAN PERAWATAN BULANAN", marginX + usableW / 2, titleY + 4.5, { align: 'center' });
+
+                        const metaY = titleY + 6.5;
+                        doc.rect(marginX, metaY, usableW, 6.5);
+                        doc.setFontSize(8.5);
+                        doc.text(`Nama Mesin : ${cleanTextForPdf(g.mesin)}`, marginX + 2.5, metaY + 4.5);
+                        doc.text(`Tanggal : ${cleanTextForPdf(g.formDateText)}`, marginX + usableW - 2.5, metaY + 4.5, { align: 'right' });
+
+                        // Tabel Checklist PM
+                        const bodyRows = g.items.map((it, idx) => [
+                            String(idx + 1),
+                            cleanTextForPdf(it.equipment),
+                            cleanTextForPdf(it.pekerjaan),
+                            cleanTextForPdf(it.standar),
+                            cleanTextForPdf(it.statusCode),
+                            cleanTextForPdf(it.pelaksana),
+                            cleanTextForPdf(it.keterangan)
+                        ]);
+
+                        doc.autoTable({
+                            startY: metaY + 6.5,
+                            head: [['No', 'NAMA MESIN DAN PERALATAN', 'AKTIVITAS PERAWATAN', 'STANDAR PENGECEKAN', 'STATUS', 'PELAKSANA', 'KETERANGAN']],
+                            body: bodyRows,
+                            theme: 'grid',
+                            styles: {
+                                fontSize: 8,
+                                cellPadding: 2,
+                                textColor: [0, 0, 0],
+                                lineColor: [0, 0, 0],
+                                lineWidth: 0.3,
+                                valign: 'middle'
+                            },
+                            headStyles: {
+                                fillColor: [245, 247, 250],
+                                textColor: [0, 0, 0],
+                                fontStyle: 'bold',
+                                halign: 'center'
+                            },
+                            columnStyles: {
+                                0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+                                1: { cellWidth: 44, halign: 'center', fontStyle: 'bold' },
+                                2: { cellWidth: 52 },
+                                3: { cellWidth: 85 },
+                                4: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+                                5: { cellWidth: 32, halign: 'center' },
+                                6: { cellWidth: usableW - 241 }
+                            },
+                            margin: { left: marginX, right: marginX, top: 10, bottom: 12 }
+                        });
+
+                        // Footer Keterangan & Tanda Tangan
+                        let footY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : metaY + 20) + 3;
+                        if (footY + 24 > doc.internal.pageSize.getHeight() - 8) {
+                            doc.addPage('a4', 'landscape');
+                            footY = 12;
+                        }
+
+                        const noteW = usableW * 0.52;
+                        const signW = (usableW - noteW) / 2;
+                        const footH = 20;
+
+                        doc.rect(marginX, footY, noteW, footH);
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        doc.text("Keterangan :", marginX + 2.5, footY + 4.5);
+                        doc.setFont("helvetica", "normal");
+                        doc.text("Tulis di kolom status : O = Jika kondisi Oke", marginX + 2.5, footY + 9.5);
+                        doc.text("X = Jika kondisi tidak Oke dan tulis di kolom keterangan kenapa tidak Oke", marginX + 2.5, footY + 14.5);
+
+                        const s1X = marginX + noteW;
+                        doc.rect(s1X, footY, signW, 5.5);
+                        doc.rect(s1X, footY + 5.5, signW, 9.5);
+                        doc.rect(s1X, footY + 15, signW, 5);
+                        doc.setFont("helvetica", "bold");
+                        doc.text("Diperiksa", s1X + signW / 2, footY + 3.8, { align: 'center' });
+                        doc.setFont("helvetica", "italic");
+                        doc.text("Koordinator Shift", s1X + signW / 2, footY + 18.5, { align: 'center' });
+
+                        const s2X = s1X + signW;
+                        doc.rect(s2X, footY, signW, 5.5);
+                        doc.rect(s2X, footY + 5.5, signW, 9.5);
+                        doc.rect(s2X, footY + 15, signW, 5);
+                        doc.setFont("helvetica", "bold");
+                        doc.text("Diketahui", s2X + signW / 2, footY + 3.8, { align: 'center' });
+                        doc.setFont("helvetica", "italic");
+                        doc.text("Kepala Bagian Mekanik", s2X + signW / 2, footY + 18.5, { align: 'center' });
+
+                        // Keterangan Periode Bulan di Kiri Bawah
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        doc.text(g.jenisBulan === 'GENAP' ? 'bln genap' : 'bln ganjil', marginX + 1, footY + footH + 4.5);
+                    });
+
+                    const firstGroup = groupsToRender[0];
+                    const safeMesin = (groupsToRender.length === 1 ? firstGroup.mesin : 'Semua_Mesin').replace(/[^a-zA-Z0-9_-]/g, '_');
+                    savePdfMobileFriendly(doc, `Checklist_PM_${safeMesin}_${firstGroup.namaBulan}_${firstGroup.selTahun}.pdf`);
                 }
 
         async function exportPMExcel() {
@@ -7940,4 +8018,4 @@
 
 </body>
 </html>
-Analyzing
+Processed and analyzed in code
