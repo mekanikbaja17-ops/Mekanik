@@ -13,36 +13,6 @@
     <link rel="apple-touch-icon" id="dynamic-apple-touch-icon">
     <link rel="manifest" id="pwa-manifest-placeholder">
 
-    <!-- MODAL KONFIRMASI PENGERJAAN PREVENTIVE MAINTENANCE -->
-    <div id="modal-konfirmasi-pm" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>✅ Konfirmasi Selesai Preventive Maintenance</h3>
-                <button class="modal-close-btn" onclick="tutupModalPM()">&times;</button>
-            </div>
-            <input type="hidden" id="modal-pm-id" value="">
-            <div id="modal-pm-detail" class="modal-detail-info"></div>
-            <div class="form-group">
-                <label>Tanggal Pelaksanaan</label>
-                <input type="date" id="modal-pm-tanggal" style="font-weight:bold;">
-            </div>
-            <div class="form-group">
-                <label>Nama Teknisi / Pelaksana</label>
-                <input type="text" id="modal-pm-personel" placeholder="Nama teknisi pelaksana...">
-            </div>
-            <div class="form-group">
-                <label>Hasil Pengecekan / Tindakan PM <span style="color:red;">*Wajib</span></label>
-                <textarea id="modal-pm-catatan" rows="3" placeholder="Contoh: Sudah dilakukan greasing, oli normal, kondisi baik..."></textarea>
-            </div>
-            <div style="background:#e8f5e9; padding:8px 10px; border-radius:6px; font-size:11px; color:#1b5e20; margin-bottom:10px;">
-                ℹ️ Tercatat khusus di <b>Preventive Maintenance</b> untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).
-            </div>
-            <div class="modal-footer-btns">
-                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalPM()">Batal</button>
-                <button type="button" class="btn-action btn-done" id="btn-submit-modal-pm" style="padding:10px 16px;" onclick="submitKonfirmasiPM()">✔️ Simpan & Tandai Selesai</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         (function setupPWA() {
@@ -1808,8 +1778,39 @@
         </div>
     </div>
 
+    <!-- MODAL KONFIRMASI PENGERJAAN PREVENTIVE MAINTENANCE -->
+    <div id="modal-konfirmasi-pm" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>✅ Konfirmasi Selesai Preventive Maintenance</h3>
+                <button class="modal-close-btn" onclick="tutupModalPM()">&times;</button>
+            </div>
+            <input type="hidden" id="modal-pm-id" value="">
+            <div id="modal-pm-detail" class="modal-detail-info"></div>
+            <div class="form-group">
+                <label>Tanggal Pelaksanaan</label>
+                <input type="date" id="modal-pm-tanggal" style="font-weight:bold;">
+            </div>
+            <div class="form-group">
+                <label>Nama Teknisi / Pelaksana</label>
+                <input type="text" id="modal-pm-personel" placeholder="Nama teknisi pelaksana...">
+            </div>
+            <div class="form-group">
+                <label>Hasil Pengecekan / Tindakan PM <span style="color:red;">*Wajib</span></label>
+                <textarea id="modal-pm-catatan" rows="3" placeholder="Contoh: Sudah dilakukan greasing, oli normal, kondisi baik..."></textarea>
+            </div>
+            <div style="background:#e8f5e9; padding:8px 10px; border-radius:6px; font-size:11px; color:#1b5e20; margin-bottom:10px;">
+                ℹ️ Tercatat khusus di <b>Preventive Maintenance</b> untuk periode bulan ini (tidak masuk ke Histori Laporan Harian).
+            </div>
+            <div class="modal-footer-btns">
+                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalPM()">Batal</button>
+                <button type="button" class="btn-action btn-done" id="btn-submit-modal-pm" style="padding:10px 16px;" onclick="submitKonfirmasiPM()">✔️ Simpan & Tandai Selesai</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL PANDUAN PASANG APLIKASI (JIKA BROWSER TIDAK SUPPORT POPUP OTOMATIS / iOS) -->
-    <div id="modal-install-app" class="modal-overlay">
+    <div id="modal-install-app" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="max-width: 430px;">
             <div class="modal-header">
                 <h3>📲 Pasang / Instal Aplikasi ke Layar Utama</h3>
@@ -1844,7 +1845,7 @@
 
 
     <!-- MODAL RIWAYAT AKTIVITAS / AUDIT LOG -->
-    <div id="modal-audit-log" class="modal-overlay">
+    <div id="modal-audit-log" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="max-width: 860px; max-height: 88vh; display:flex; flex-direction:column;">
             <div class="modal-header">
                 <h3>🕵️ Riwayat Aktivitas (Edit, Hapus, Tambah & Kurangi Part)</h3>
@@ -1893,7 +1894,7 @@
     </div>
 
     <!-- MODAL POP-UP KONFIRMASI & INPUT KETERANGAN PEKERJAAN PERSONEL -->
-    <div id="modal-konfirmasi-perintah" class="modal-overlay">
+    <div id="modal-konfirmasi-perintah" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <div class="modal-header">
                 <h3>📝 Konfirmasi & Keterangan Pekerjaan</h3>
@@ -8070,7 +8071,7 @@
 </style>
 
     <!-- MODAL PENGATURAN SEBELUM CETAK PDF / PRINT PREVENTIVE MAINTENANCE -->
-    <div id="modal-cetak-pm" class="modal-overlay">
+    <div id="modal-cetak-pm" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="max-width: 440px;">
             <div class="modal-header">
                 <h3>🖨️ Pengaturan Sebelum Cetak Form PM</h3>
@@ -8104,7 +8105,7 @@
 
 
     <!-- MODAL PILIH OPSI FORMAT PRINT / UNDUH PREVENTIVE MAINTENANCE -->
-    <div id="modal-opsi-format-pm" class="modal-overlay">
+    <div id="modal-opsi-format-pm" class="modal-overlay" style="display:none;">
         <div class="modal-box" style="max-width: 540px; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column;">
             <div class="modal-header" style="position: sticky; top: -22px; background: #fff; z-index: 10; padding-top: 4px; margin-bottom: 12px;">
                 <h3 id="modal-opsi-pm-title">🖨️ Pilih Format Output Preventive Maintenance</h3>
