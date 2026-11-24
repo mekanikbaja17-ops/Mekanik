@@ -8132,6 +8132,17 @@
                 </div>
             </div>
 
+            <div class="grid-2" style="gap:10px; margin-bottom:10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px; color:#166534;">📅 Pilih Tanggal (Opsi 2 - Gantt Jam)</label>
+                    <input type="date" id="opsi-pm-tanggal-picker" onchange="syncOpsiPMTanggalPicker()" style="padding:9px; font-weight:bold;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px; color:#166534;">📝 Teks Tanggal / Bulan di Header</label>
+                    <input type="text" id="opsi-pm-tanggal-teks" placeholder="Contoh: 24 November 2026" style="padding:9px; font-weight:bold;">
+                </div>
+            </div>
+
             <div class="grid-2" style="gap:10px; margin-bottom:10px;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="font-size:12px;">Lokasi Area (untuk Format Gantt Jam)</label>
@@ -8402,10 +8413,20 @@
                 ? '📥 Unduh Excel (.xlsx)'
                 : '📄 Lanjut Pengaturan & Cetak PDF';
 
-            const firstItem = groups[0]?.items?.[0];
+            const firstGroup = groups[0];
+            const firstItem = firstGroup?.items?.[0];
             if (!document.getElementById('opsi-pm-lokasi').value) {
                 document.getElementById('opsi-pm-lokasi').value = firstItem?.equipment || 'Mill';
             }
+
+            const selBulan = document.getElementById('pm-filter-bulan')?.value || getWIBDateString().split('-')[1];
+            const selTahun = document.getElementById('pm-filter-tahun')?.value || getWIBDateString().split('-')[0];
+            const todayYMD = getWIBDateString();
+            const defaultPickerYMD = todayYMD.startsWith(`${selTahun}-${selBulan}`) ? todayYMD : `${selTahun}-${selBulan}-01`;
+            const pickerEl = document.getElementById('opsi-pm-tanggal-picker');
+            const teksEl = document.getElementById('opsi-pm-tanggal-teks');
+            if (pickerEl) pickerEl.value = defaultPickerYMD;
+            if (teksEl) teksEl.value = firstGroup?.formDateText || formatTanggalPanjangID(defaultPickerYMD);
 
             const startEl = document.getElementById('opsi-pm-jam-mulai');
             const endEl = document.getElementById('opsi-pm-jam-selesai');
@@ -8454,6 +8475,14 @@
             renderPMHourBlockEditor();
         }
 
+        function syncOpsiPMTanggalPicker() {
+            const pickerVal = document.getElementById('opsi-pm-tanggal-picker')?.value;
+            const teksEl = document.getElementById('opsi-pm-tanggal-teks');
+            if (pickerVal && teksEl) {
+                teksEl.value = formatTanggalPanjangID(pickerVal);
+            }
+        }
+
         function getPMJobJamOptions() {
             const rawStart = parseInt(document.getElementById('opsi-pm-jam-mulai')?.value, 10);
             const rawEnd = parseInt(document.getElementById('opsi-pm-jam-selesai')?.value, 10);
@@ -8461,10 +8490,14 @@
             const endJam = Math.max(startJam, Math.min(23, Number.isNaN(rawEnd) ? 15 : rawEnd));
             const hours = [];
             for (let h = startJam; h <= endJam; h++) hours.push(h);
+            const pickerVal = document.getElementById('opsi-pm-tanggal-picker')?.value || '';
+            const teksVal = (document.getElementById('opsi-pm-tanggal-teks')?.value || '').trim();
+            const customTanggal = teksVal || (pickerVal ? formatTanggalPanjangID(pickerVal) : '');
             return {
                 lokasiDefault: (document.getElementById('opsi-pm-lokasi')?.value || 'Mill').trim() || 'Mill',
                 statusFufDefault: (document.getElementById('opsi-pm-status-fuf')?.value || 'F').trim() || 'F',
                 mengetahui: (document.getElementById('opsi-pm-mengetahui')?.value || 'Akim').trim() || 'Akim',
+                customTanggal: customTanggal,
                 hours: hours
             };
         }
@@ -8620,7 +8653,7 @@
                 // Baris 3: Periode / Bulan
                 ws.mergeCells(`A3:D3`);
                 const c3 = ws.getCell('A3');
-                c3.value = `Bulan : ${g.formDateText || (g.namaBulan + ' ' + g.selTahun)}`;
+                c3.value = `Bulan : ${opts.customTanggal || g.formDateText || (g.namaBulan + ' ' + g.selTahun)}`;
                 c3.font = { name: 'Calibri', size: 10, bold: false };
                 c3.alignment = { horizontal: 'left', vertical: 'middle' };
                 ws.getRow(3).height = 18;
@@ -8854,7 +8887,7 @@
 
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(9);
-                doc.text(`Bulan : ${cleanTextForPdf(g.formDateText || (g.namaBulan + ' ' + g.selTahun))}`, marginX, 23);
+                doc.text(`Bulan : ${cleanTextForPdf(opts.customTanggal || g.formDateText || (g.namaBulan + ' ' + g.selTahun))}`, marginX, 23);
 
                 const wNo = 9;
                 const wJenis = 68;
