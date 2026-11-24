@@ -1046,9 +1046,9 @@
                 <div id="tab-preventive" class="card tab-pane">
                     <h3>
                         <span id="card-pm-title">🛠️ Jadwal & Checklist Preventive Maintenance (Ganjil / Genap)</span>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn-export" onclick="exportPMExcel()" title="Unduh Form Prosedur Mutu PM (.xlsx)"><i class="fa-solid fa-file-excel"></i> Excel Form PM</button>
-                            <button class="btn-pdf" onclick="cetakPDFPM()" title="Cetak / Simpan PDF Form Prosedur Mutu PM"><i class="fa-solid fa-print"></i> Print / PDF Form PM</button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <button type="button" class="btn-export" onclick="bukaModalOpsiFormatPM('excel')" title="Pilih Format Excel Prosedur Mutu / Job Pekerjaan Mekanik (Gantt Jam)"><i class="fa-solid fa-file-excel"></i> Unduh Excel PM</button>
+                            <button type="button" class="btn-pdf" onclick="bukaModalOpsiFormatPM('pdf')" title="Pilih Format Print / PDF Prosedur Mutu / Job Pekerjaan Mekanik (Gantt Jam)"><i class="fa-solid fa-print"></i> Print / PDF PM</button>
                         </div>
                     </h3>
 
@@ -5939,6 +5939,84 @@
             }).filter(group => group.items.length > 0);
         }
 
+                
+        function getPMGroupsForJobJam() {
+            const selBulan = document.getElementById('pm-filter-bulan')?.value || getWIBDateString().split('-')[1];
+            const selTahun = document.getElementById('pm-filter-tahun')?.value || getWIBDateString().split('-')[0];
+            const selMesin = document.getElementById('pm-filter-mesin')?.value || 'ALL';
+            const periodeKey = `${selTahun}-${selBulan}`;
+            const namaBulan = (typeof NAMA_BULAN_ID !== 'undefined' && NAMA_BULAN_ID[selBulan]) ? NAMA_BULAN_ID[selBulan] : selBulan;
+            const jenisBulan = getJenisBulan(selBulan);
+
+            // Khusus Opsi ke-2 (Job Pekerjaan Mekanik - Gantt Jam): sertakan item rutin & PEKERJAAN_TAMBAHAN pada periode aktif
+            const activeList = getCombinedPMMasterList().filter(item =>
+                isPMItemActiveInPeriode(item, periodeKey, jenisBulan)
+            );
+
+            const logsMap = new Map();
+            getCombinedPMLogsList().forEach(l => {
+                if (l.periode === periodeKey) logsMap.set(String(l.pmId), l);
+            });
+
+            const targetMachines = (selMesin && selMesin !== 'ALL')
+                ? [selMesin]
+                : Array.from(new Set([
+                    ...(cloudData.settings?.masterMesin || []),
+                    ...activeList.map(m => m.mesin)
+                ])).filter(Boolean);
+
+            return targetMachines.map(mesin => {
+                const items = activeList
+                    .filter(m => String(m.mesin || '').trim().toUpperCase() === String(mesin).trim().toUpperCase())
+                    .map(m => {
+                        const isTambahan = String(m.siklus || '').toUpperCase() === 'PEKERJAAN_TAMBAHAN';
+                        const log = logsMap.get(String(m.id));
+                        const rawKet = log ? (log.catatan || '') : '';
+                        const tglPelaksanaanText = (log && log.tanggal) ? formatTanggalIndo(log.tanggal) : '';
+                        const ketParts = [
+                            isTambahan ? '[Pekerjaan Tambahan]' : '',
+                            rawKet,
+                            tglPelaksanaanText ? `Tgl: ${tglPelaksanaanText}` : ''
+                        ].filter(Boolean);
+                        return {
+                            id: m.id,
+                            mesin: m.mesin,
+                            siklus: m.siklus,
+                            isTambahan: isTambahan,
+                            equipment: m.equipment || '-',
+                            pekerjaan: m.pekerjaan || '-',
+                            standar: (m.standar && m.standar !== '-') ? m.standar : '-',
+                            statusCode: log ? 'O' : '',
+                            pelaksana: log ? (log.personel || '') : '',
+                            keterangan: ketParts.join(' | '),
+                            rawTanggal: log ? log.tanggal : ''
+                        };
+                    });
+
+                let formDateText = `01 ${namaBulan} ${selTahun}`;
+                const loggedDates = items.map(it => it.rawTanggal).filter(Boolean).sort();
+                if (loggedDates.length > 0) {
+                    const latestYMD = normalizeDateToWIB_YMD(loggedDates[loggedDates.length - 1]);
+                    const p = latestYMD.split('-');
+                    if (p.length === 3) {
+                        const blnName = NAMA_BULAN_ID[p[1]] || p[1];
+                        formDateText = `${p[2]} ${blnName} ${p[0]}`;
+                    }
+                }
+
+                return {
+                    mesin,
+                    periodeKey,
+                    namaBulan,
+                    selTahun,
+                    jenisBulan,
+                    formDateText,
+                    items
+                };
+            }).filter(group => group.items.length > 0);
+        }
+
+
                 let pendingPMPrintGroups = [];
 
                 function formatTanggalPanjangID(ymdStr) {
@@ -8018,7 +8096,877 @@
         </div>
     </div>
 
+
+    <!-- MODAL PILIH OPSI FORMAT PRINT / UNDUH PREVENTIVE MAINTENANCE -->
+    <div id="modal-opsi-format-pm" class="modal-overlay">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="modal-opsi-pm-title">🖨️ Pilih Format Output Preventive Maintenance</h3>
+                <button type="button" class="modal-close-btn" onclick="tutupModalOpsiFormatPM()">&times;</button>
+            </div>
+            <input type="hidden" id="opsi-pm-mode" value="pdf">
+
+            <div class="form-group" style="margin-bottom:10px;">
+                <label>Pilih Template / Format Dokumen:</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                    <label style="display:flex; align-items:flex-start; gap:8px; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:8px; cursor:pointer; font-weight:normal;">
+                        <input type="radio" name="pmFormatChoice" id="pm-fmt-prosedur" value="prosedur" checked onchange="onPMFormatChoiceChange()" style="width:auto; margin-top:3px;">
+                        <div>
+                            <strong style="color:#003399; font-size:13px;">1. Form Prosedur Mutu (Checklist Bulanan PM-SM-7.1.6/F4)</strong>
+                            <div style="font-size:11px; color:#475569;">Kop Prosedur Mutu, No. Mesin, Tanggal, Aktivitas Perawatan, Standar Pengecekan, Status (O/X), Pelaksana & Keterangan.</div>
+                        </div>
+                    </label>
+                    <label style="display:flex; align-items:flex-start; gap:8px; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:8px; cursor:pointer; font-weight:normal;">
+                        <input type="radio" name="pmFormatChoice" id="pm-fmt-job-jam" value="job_jam" onchange="onPMFormatChoiceChange()" style="width:auto; margin-top:3px;">
+                        <div>
+                            <strong style="color:#0f766e; font-size:13px;">2. Job Pekerjaan Mekanik — Gantt Jam (Seperti Contoh Foto)</strong>
+                            <div style="font-size:11px; color:#475569;">Header <em>JOB PEKERJAAN MEKANK / PREVENTIVE MAINTENANCE</em>, Bulan/Tanggal, Lokasi, Mesin, Grid Jam (8–15), Target (Biru) & Aktual (Hijau), Status F/UF, Pelaksana, Spare Part & Keterangan.</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid-2" style="gap:10px; margin-bottom:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px;">Lokasi Area (untuk Format Gantt Jam)</label>
+                    <input type="text" id="opsi-pm-lokasi" placeholder="Misal: Mill, Basemant, Line 1...">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px;">Status F/UF Default</label>
+                    <select id="opsi-pm-status-fuf" style="padding:10px; font-weight:bold;">
+                        <option value="F">F (Fixed / Terjadwal)</option>
+                        <option value="UF">UF (Unfixed / Insidental)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2" style="gap:10px; margin-bottom:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px;">Jam Mulai Target/Aktual</label>
+                    <input type="number" id="opsi-pm-jam-mulai" min="0" max="23" value="8" style="padding:10px; font-weight:bold;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:12px;">Jam Selesai Target/Aktual</label>
+                    <input type="number" id="opsi-pm-jam-selesai" min="0" max="23" value="15" style="padding:10px; font-weight:bold;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:10px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+                    <label style="font-size:12px; margin:0; color:#0369a1;">⏱️ Atur Blok Jam per Item (Klik kotak jam: 1x = Target Biru, 2x = Aktual Hijau, 3x = Hapus)</label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn-action" style="background:#0284c7; color:#fff; padding:4px 8px; font-size:11px;" onclick="samakanAktualDenganTargetPM()">Aktual = Target</button>
+                        <button type="button" class="btn-action" style="background:#64748b; color:#fff; padding:4px 8px; font-size:11px;" onclick="resetBlokJamPM()">Reset Jam</button>
+                    </div>
+                </div>
+                <div style="font-size:11px; color:#334155; margin-bottom:6px;">
+                    Legenda klik: <span style="display:inline-block;width:10px;height:10px;background:#00AEEF;border:1px solid #0f172a;vertical-align:middle;"></span> Target &nbsp;
+                    <span style="display:inline-block;width:10px;height:10px;background:#92D050;border:1px solid #0f172a;vertical-align:middle;"></span> Aktual (Target + Aktual)
+                </div>
+                <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:8px; margin-bottom:8px;">
+                    <div style="font-size:11px; font-weight:bold; color:#0f172a; margin-bottom:4px;">👷 Pelaksana Massal / Tambah Cepat (Semua Item Aktif)</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <input type="text" id="opsi-pm-pelaksana-massal" list="daftar-pelaksana-pm" placeholder="Ketik/pilih nama pelaksana (bisa lebih dari 1, misal: Deden, Budi)..." style="flex:1; min-width:180px; padding:6px 8px; font-size:12px; border:1px solid #94a3b8; border-radius:4px;">
+                        <datalist id="daftar-pelaksana-pm"></datalist>
+                        <button type="button" class="btn-action" style="background:#0f766e; color:#fff; padding:6px 10px; font-size:11px;" onclick="terapkanPelaksanaMassalPM()">Terapkan ke Semua</button>
+                    </div>
+                </div>
+                <div id="pm-jam-block-editor" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;">Nama Mengetahui (Tanda Tangan Kanan Bawah)</label>
+                <input type="text" id="opsi-pm-mengetahui" value="Akim" placeholder="Nama penanggung jawab / KaBag Mekanik...">
+            </div>
+
+            <div class="modal-footer-btns">
+                <button type="button" class="btn-action" style="background:#6c757d; color:white; padding:10px 16px;" onclick="tutupModalOpsiFormatPM()">Batal</button>
+                <button type="button" class="btn-primary" id="btn-lanjut-opsi-pm" style="width:auto; padding:10px 18px;" onclick="jalankanFormatPMTerpilih()">Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PM_HOUR_BLOCKS_STORAGE_KEY = 'alexindo_pm_hour_blocks_v1';
+
+        function loadPMHourBlocksConfig() {
+            try {
+                const raw = localStorage.getItem(PM_HOUR_BLOCKS_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function savePMHourBlocksConfig(cfg) {
+            try {
+                localStorage.setItem(PM_HOUR_BLOCKS_STORAGE_KEY, JSON.stringify(cfg || {}));
+            } catch (e) {}
+        }
+
+        function getPMItemBlockKey(periodeKey, mesin, item, idx) {
+            const safeId = item && item.id !== undefined && item.id !== null ? String(item.id) : `idx_${idx}`;
+            return `${periodeKey || 'ALL'}__${mesin || 'MESIN'}__${safeId}`;
+        }
+
+        function getItemHourBlocks(item, idx, hours, periodeKey, mesin, cfgMap) {
+            const map = cfgMap || loadPMHourBlocksConfig();
+            const key = getPMItemBlockKey(periodeKey, mesin, item, idx);
+            const saved = map[key];
+            if (saved && (Array.isArray(saved.target) || Array.isArray(saved.actual))) {
+                const validSet = new Set(hours);
+                const target = Array.from(new Set((saved.target || []).map(Number).filter(h => validSet.has(h))));
+                const actual = Array.from(new Set((saved.actual || []).map(Number).filter(h => validSet.has(h))));
+                return { target, actual };
+            }
+            // Default awal: 1 slot jam sesuai urutan item (bisa langsung diubah lewat blok jam)
+            const defaultHour = hours[idx % hours.length];
+            const isDone = item && item.statusCode === 'O';
+            return {
+                target: [defaultHour],
+                actual: isDone ? [defaultHour] : []
+            };
+        }
+
+        function renderPMHourBlockEditor() {
+            const container = document.getElementById('pm-jam-block-editor');
+            if (!container) return;
+
+            const groups = getPMGroupsForJobJam();
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+            const pelaksanaMap = loadPMPelaksanaConfig();
+
+            const allRows = [];
+            groups.forEach(g => {
+                (g.items || []).forEach((it, idx) => {
+                    allRows.push({ group: g, item: it, idx: idx });
+                });
+            });
+
+            if (!allRows.length) {
+                container.innerHTML = '<div style="font-size:12px;color:#64748b;">Tidak ada item PM untuk diatur blok jamnya.</div>';
+                return;
+            }
+
+            container.innerHTML = allRows.map(({ group, item, idx }) => {
+                const pelaksanaVal = resolvePMPelaksana(item, idx, group.periodeKey, group.mesin, pelaksanaMap);
+                const escapedPelaksana = pelaksanaVal.replace(/"/g, '&quot;');
+                const key = getPMItemBlockKey(group.periodeKey, group.mesin, item, idx);
+                const blk = getItemHourBlocks(item, idx, hours, group.periodeKey, group.mesin, cfgMap);
+                const tSet = new Set(blk.target);
+                const aSet = new Set(blk.actual);
+
+                const buttonsHtml = hours.map(h => {
+                    const isT = tSet.has(h);
+                    const isA = aSet.has(h);
+                    let bg = '#ffffff';
+                    let fg = '#0f172a';
+                    let badge = '';
+                    if (isT && isA) {
+                        bg = '#92D050';
+                        fg = '#0f172a';
+                        badge = 'T+A';
+                    } else if (isT) {
+                        bg = '#00AEEF';
+                        fg = '#ffffff';
+                        badge = 'T';
+                    } else if (isA) {
+                        bg = '#bbf7d0';
+                        fg = '#0f172a';
+                        badge = 'A';
+                    }
+                    return `<button type="button" onclick="cyclePMItemHourBlock('${encodeURIComponent(key)}', ${h})" title="Jam ${h}" style="min-width:34px;padding:4px 3px;border:1px solid #0f172a;border-radius:4px;background:${bg};color:${fg};font-size:10px;font-weight:bold;cursor:pointer;line-height:1.15;">
+                        <div>${h}</div>
+                        <div style="font-size:8px;opacity:0.9;">${badge || '-'}</div>
+                    </button>`;
+                }).join('');
+
+                return `<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;">
+                    <div style="font-size:11px;font-weight:bold;color:#1e293b;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${idx + 1}. [${group.mesin}] ${item.pekerjaan || '-'}
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:3px;">${buttonsHtml}</div>
+                    <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:10px;font-weight:bold;color:#334155;">Pelaksana:</span>
+                        <input type="text" list="daftar-pelaksana-pm" value="${escapedPelaksana}"
+                            onchange="setPMItemPelaksana('${encodeURIComponent(key)}', this.value)"
+                            placeholder="Nama pelaksana..."
+                            style="flex:1;padding:4px 6px;font-size:11px;border:1px solid #cbd5e1;border-radius:4px;">
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function cyclePMItemHourBlock(encodedKey, hourVal) {
+            const key = decodeURIComponent(encodedKey);
+            const groups = getPMGroupsForJobJam();
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+
+            let matched = null;
+            groups.forEach(g => {
+                (g.items || []).forEach((it, idx) => {
+                    if (getPMItemBlockKey(g.periodeKey, g.mesin, it, idx) === key) {
+                        matched = { group: g, item: it, idx: idx };
+                    }
+                });
+            });
+            if (!matched) return;
+
+            const current = getItemHourBlocks(matched.item, matched.idx, hours, matched.group.periodeKey, matched.group.mesin, cfgMap);
+            const tSet = new Set(current.target);
+            const aSet = new Set(current.actual);
+
+            const hasT = tSet.has(hourVal);
+            const hasA = aSet.has(hourVal);
+
+            // Siklus: kosong -> Target (Biru) -> Target + Aktual (Hijau) -> kosong
+            if (!hasT && !hasA) {
+                tSet.add(hourVal);
+            } else if (hasT && !hasA) {
+                aSet.add(hourVal);
+            } else {
+                tSet.delete(hourVal);
+                aSet.delete(hourVal);
+            }
+
+            cfgMap[key] = {
+                target: Array.from(tSet).sort((a, b) => a - b),
+                actual: Array.from(aSet).sort((a, b) => a - b)
+            };
+            savePMHourBlocksConfig(cfgMap);
+            renderPMHourBlockEditor();
+        }
+
+        function samakanAktualDenganTargetPM() {
+            const groups = getPMGroupsForJobJam();
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+
+            groups.forEach(g => {
+                (g.items || []).forEach((it, idx) => {
+                    const key = getPMItemBlockKey(g.periodeKey, g.mesin, it, idx);
+                    const current = getItemHourBlocks(it, idx, hours, g.periodeKey, g.mesin, cfgMap);
+                    cfgMap[key] = {
+                        target: current.target.slice(),
+                        actual: current.target.slice()
+                    };
+                });
+            });
+            savePMHourBlocksConfig(cfgMap);
+            renderPMHourBlockEditor();
+        }
+
+        function resetBlokJamPM() {
+            const groups = getPMGroupsForJobJam();
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+
+            groups.forEach(g => {
+                (g.items || []).forEach((it, idx) => {
+                    const key = getPMItemBlockKey(g.periodeKey, g.mesin, it, idx);
+                    const defaultHour = hours[idx % hours.length];
+                    cfgMap[key] = {
+                        target: [defaultHour],
+                        actual: []
+                    };
+                });
+            });
+            savePMHourBlocksConfig(cfgMap);
+            renderPMHourBlockEditor();
+        }
+
+        function bukaModalOpsiFormatPM(mode) {
+            const groups = getPMGroupsForJobJam();
+            if (!groups.length) {
+                alert('Tidak ada item Preventive Maintenance (rutin maupun pekerjaan tambahan) pada mesin & periode yang dipilih.');
+                return;
+            }
+            const modeVal = mode === 'excel' ? 'excel' : 'pdf';
+            document.getElementById('opsi-pm-mode').value = modeVal;
+            document.getElementById('modal-opsi-pm-title').innerText = modeVal === 'excel'
+                ? '📊 Pilih Format Unduh Excel Preventive Maintenance'
+                : '🖨️ Pilih Format Print / PDF Preventive Maintenance';
+            document.getElementById('btn-lanjut-opsi-pm').innerText = modeVal === 'excel'
+                ? '📥 Unduh Excel (.xlsx)'
+                : '📄 Lanjut Pengaturan & Cetak PDF';
+
+            const firstItem = groups[0]?.items?.[0];
+            if (!document.getElementById('opsi-pm-lokasi').value) {
+                document.getElementById('opsi-pm-lokasi').value = firstItem?.equipment || 'Mill';
+            }
+
+            const startEl = document.getElementById('opsi-pm-jam-mulai');
+            const endEl = document.getElementById('opsi-pm-jam-selesai');
+            if (startEl && !startEl.dataset.boundJamEditor) {
+                startEl.addEventListener('change', renderPMHourBlockEditor);
+                startEl.dataset.boundJamEditor = '1';
+            }
+            if (endEl && !endEl.dataset.boundJamEditor) {
+                endEl.addEventListener('change', renderPMHourBlockEditor);
+                endEl.dataset.boundJamEditor = '1';
+            }
+
+            const dlPelaksana = document.getElementById('daftar-pelaksana-pm');
+            if (dlPelaksana) {
+                const names = Array.from(new Set(
+                    (cloudData.karyawan || [])
+                        .map(k => (k.nama || k.name || '').trim())
+                        .filter(Boolean)
+                ));
+                dlPelaksana.innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+            }
+            renderPMHourBlockEditor();
+            document.getElementById('modal-opsi-format-pm').style.display = 'flex';
+        }
+
+        function tutupModalOpsiFormatPM() {
+            document.getElementById('modal-opsi-format-pm').style.display = 'none';
+        }
+
+        function onPMFormatChoiceChange() {
+            renderPMHourBlockEditor();
+        }
+
+        function getPMJobJamOptions() {
+            const rawStart = parseInt(document.getElementById('opsi-pm-jam-mulai')?.value, 10);
+            const rawEnd = parseInt(document.getElementById('opsi-pm-jam-selesai')?.value, 10);
+            const startJam = Math.max(0, Math.min(23, Number.isNaN(rawStart) ? 8 : rawStart));
+            const endJam = Math.max(startJam, Math.min(23, Number.isNaN(rawEnd) ? 15 : rawEnd));
+            const hours = [];
+            for (let h = startJam; h <= endJam; h++) hours.push(h);
+            return {
+                lokasiDefault: (document.getElementById('opsi-pm-lokasi')?.value || 'Mill').trim() || 'Mill',
+                statusFufDefault: (document.getElementById('opsi-pm-status-fuf')?.value || 'F').trim() || 'F',
+                mengetahui: (document.getElementById('opsi-pm-mengetahui')?.value || 'Akim').trim() || 'Akim',
+                hours: hours
+            };
+        }
+
+        function jalankanFormatPMTerpilih() {
+            const mode = document.getElementById('opsi-pm-mode').value || 'pdf';
+            const selectedChoice = document.querySelector('input[name="pmFormatChoice"]:checked')?.value || 'prosedur';
+            tutupModalOpsiFormatPM();
+
+            if (selectedChoice === 'prosedur') {
+                if (mode === 'excel') {
+                    exportPMExcel();
+                } else {
+                    cetakPDFPM();
+                }
+                return;
+            }
+
+            if (mode === 'excel') {
+                exportPMJobPekerjaanExcel();
+            } else {
+                cetakPDFPMJobPekerjaan();
+            }
+        }
+
+        const PM_PELAKSANA_STORAGE_KEY = 'alexindo_pm_pelaksana_v1';
+
+        function loadPMPelaksanaConfig() {
+            try {
+                const raw = localStorage.getItem(PM_PELAKSANA_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function savePMPelaksanaConfig(cfg) {
+            try {
+                localStorage.setItem(PM_PELAKSANA_STORAGE_KEY, JSON.stringify(cfg || {}));
+            } catch (e) {}
+        }
+
+        function getPMItemPelaksanaKey(periodeKey, mesin, item, idx) {
+            const safeId = (item && item.id !== undefined && item.id !== null) ? String(item.id) : `idx_${idx}`;
+            return `${periodeKey || 'ALL'}__${mesin || 'MESIN'}__${safeId}`;
+        }
+
+        function resolvePMPelaksana(item, idx, periodeKey, mesin, cfgMap) {
+            const map = cfgMap || loadPMPelaksanaConfig();
+            const key = getPMItemPelaksanaKey(periodeKey, mesin, item, idx);
+            if (map[key] && String(map[key]).trim() !== '') {
+                return String(map[key]).trim();
+            }
+            if (item && item.pelaksana && String(item.pelaksana).trim() !== '') {
+                return String(item.pelaksana).trim();
+            }
+            return 'Mekanik shift';
+        }
+
+        function setPMItemPelaksana(encodedKey, value) {
+            const key = decodeURIComponent(encodedKey);
+            const map = loadPMPelaksanaConfig();
+            const trimmed = String(value || '').trim();
+            if (trimmed) {
+                map[key] = trimmed;
+            } else {
+                delete map[key];
+            }
+            savePMPelaksanaConfig(map);
+        }
+
+        function terapkanPelaksanaMassalPM() {
+            const inputEl = document.getElementById('opsi-pm-pelaksana-massal');
+            const val = String(inputEl?.value || '').trim();
+            if (!val) {
+                alert('Isi atau pilih nama pelaksana terlebih dahulu.');
+                return;
+            }
+            const groups = getPMGroupsForJobJam();
+            const map = loadPMPelaksanaConfig();
+            groups.forEach(g => {
+                (g.items || []).forEach((it, idx) => {
+                    const key = getPMItemPelaksanaKey(g.periodeKey, g.mesin, it, idx);
+                    map[key] = val;
+                });
+            });
+            savePMPelaksanaConfig(map);
+            renderPMHourBlockEditor();
+        }
+
+        async function exportPMJobPekerjaanExcel() {
+            if (typeof ExcelJS === 'undefined') {
+                alert('Library Excel sedang dimuat, silakan tunggu sebentar lalu coba lagi.');
+                return;
+            }
+            const groups = getPMGroupsForJobJam();
+            if (!groups.length) {
+                alert('Tidak ada item Preventive Maintenance (rutin maupun pekerjaan tambahan) pada mesin & periode yang dipilih.');
+                return;
+            }
+
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+            const jamStartCol = 5; // Kolom E
+            const jamEndCol = jamStartCol + hours.length - 1;
+            const colStatusFuf = jamEndCol + 1;
+            const colPelaksana = jamEndCol + 2;
+            const colSparepart = jamEndCol + 3;
+            const colKeterangan = jamEndCol + 4;
+            const totalCols = colKeterangan;
+
+            const borderThin = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+
+            const workbook = new ExcelJS.Workbook();
+            const usedSheetNames = new Set();
+
+            groups.forEach((g, gIdx) => {
+                let baseName = `PM_${g.mesin}`.replace(/[\/*?:[\]]/g, '').trim().slice(0, 28) || `PM_Mesin_${gIdx + 1}`;
+                let sheetName = baseName;
+                let n = 2;
+                while (usedSheetNames.has(sheetName.toLowerCase())) {
+                    sheetName = `${baseName.slice(0, 26)}_${n++}`;
+                }
+                usedSheetNames.add(sheetName.toLowerCase());
+
+                const ws = workbook.addWorksheet(sheetName);
+                const lastColLetter = ws.getColumn(totalCols).letter;
+                const jamStartLetter = ws.getColumn(jamStartCol).letter;
+                const jamEndLetter = ws.getColumn(jamEndCol).letter;
+
+                // Baris 1: Judul Utama
+                ws.mergeCells(`A1:${lastColLetter}1`);
+                const c1 = ws.getCell('A1');
+                c1.value = 'JOB PEKERJAAN MEKANIK';
+                c1.font = { name: 'Calibri', size: 12, bold: true };
+                c1.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(1).height = 20;
+
+                // Baris 2: Subjudul
+                ws.mergeCells(`A2:${lastColLetter}2`);
+                const c2 = ws.getCell('A2');
+                c2.value = 'PREVENTIVE MAINTENANCE';
+                c2.font = { name: 'Calibri', size: 11, bold: true, italic: true };
+                c2.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(2).height = 18;
+
+                // Baris 3: Periode / Bulan
+                ws.mergeCells(`A3:D3`);
+                const c3 = ws.getCell('A3');
+                c3.value = `Bulan : ${g.formDateText || (g.namaBulan + ' ' + g.selTahun)}`;
+                c3.font = { name: 'Calibri', size: 10, bold: false };
+                c3.alignment = { horizontal: 'left', vertical: 'middle' };
+                ws.getRow(3).height = 18;
+
+                // Baris 4-5: Header Tabel
+                ws.mergeCells('A4:A5');
+                ws.mergeCells('B4:B5');
+                ws.mergeCells('C4:C5');
+                ws.mergeCells('D4:D5');
+                if (jamEndCol > jamStartCol) {
+                    ws.mergeCells(`${jamStartLetter}4:${jamEndLetter}4`);
+                }
+                ws.mergeCells(4, colStatusFuf, 5, colStatusFuf);
+                ws.mergeCells(4, colPelaksana, 5, colPelaksana);
+                ws.mergeCells(4, colSparepart, 5, colSparepart);
+                ws.mergeCells(4, colKeterangan, 5, colKeterangan);
+
+                ws.getCell('A4').value = 'NO';
+                ws.getCell('B4').value = 'JENIS PEKERJAAN';
+                ws.getCell('C4').value = 'LOKASI';
+                ws.getCell('D4').value = 'Mesin';
+                ws.getCell(4, jamStartCol).value = 'Jam';
+                ws.getCell(4, colStatusFuf).value = 'Status\nF/UF';
+                ws.getCell(4, colPelaksana).value = 'PELAKSANA';
+                ws.getCell(4, colSparepart).value = 'SPARE PART';
+                ws.getCell(4, colKeterangan).value = 'KETERANGAN';
+
+                hours.forEach((h, hIdx) => {
+                    ws.getCell(5, jamStartCol + hIdx).value = h;
+                });
+
+                ws.getRow(4).height = 20;
+                ws.getRow(5).height = 20;
+                for (let r = 4; r <= 5; r++) {
+                    for (let c = 1; c <= totalCols; c++) {
+                        const cell = ws.getCell(r, c);
+                        cell.font = { name: 'Calibri', size: 10, bold: true };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        cell.border = borderThin;
+                    }
+                }
+
+                // Isi baris pekerjaan: tiap item memiliki 2 baris (Baris Target Biru & Baris Aktual Hijau)
+                let curRow = 6;
+                g.items.forEach((it, idx) => {
+                    const rTarget = curRow;
+                    const rAktual = curRow + 1;
+
+                    ws.mergeCells(`A${rTarget}:A${rAktual}`);
+                    ws.mergeCells(`B${rTarget}:B${rAktual}`);
+                    ws.mergeCells(`C${rTarget}:C${rAktual}`);
+                    ws.mergeCells(`D${rTarget}:D${rAktual}`);
+                    ws.mergeCells(rTarget, colStatusFuf, rAktual, colStatusFuf);
+                    ws.mergeCells(rTarget, colPelaksana, rAktual, colPelaksana);
+                    ws.mergeCells(rTarget, colSparepart, rAktual, colSparepart);
+                    ws.mergeCells(rTarget, colKeterangan, rAktual, colKeterangan);
+
+                    ws.getCell(`A${rTarget}`).value = idx + 1;
+                    ws.getCell(`B${rTarget}`).value = it.pekerjaan;
+                    ws.getCell(`C${rTarget}`).value = it.equipment || opts.lokasiDefault;
+                    ws.getCell(`D${rTarget}`).value = g.mesin;
+                    ws.getCell(rTarget, colStatusFuf).value = it.isTambahan ? 'UF' : opts.statusFufDefault;
+                    ws.getCell(rTarget, colPelaksana).value = resolvePMPelaksana(it, idx, g.periodeKey, g.mesin, pelaksanaMap);
+                    ws.getCell(rTarget, colSparepart).value = '';
+                    ws.getCell(rTarget, colKeterangan).value = it.keterangan || '';
+
+                    const blk = getItemHourBlocks(it, idx, hours, g.periodeKey, g.mesin, cfgMap);
+                    const tSet = new Set(blk.target);
+                    const aSet = new Set(blk.actual);
+
+                    hours.forEach((h, hIdx) => {
+                        const cTgt = ws.getCell(rTarget, jamStartCol + hIdx);
+                        const cAkt = ws.getCell(rAktual, jamStartCol + hIdx);
+                        if (tSet.has(h)) {
+                            cTgt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00AEEF' } };
+                        }
+                        if (aSet.has(h)) {
+                            cAkt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } };
+                        }
+                    });
+
+                    ws.getRow(rTarget).height = 18;
+                    ws.getRow(rAktual).height = 18;
+
+                    for (let r = rTarget; r <= rAktual; r++) {
+                        for (let c = 1; c <= totalCols; c++) {
+                            const cell = ws.getCell(r, c);
+                            cell.font = {
+                                name: 'Calibri',
+                                size: 10,
+                                bold: (c === 1 || c === 4 || c === colStatusFuf)
+                            };
+                            cell.border = borderThin;
+                            if (c === 1 || c === 3 || c === 4 || (c >= jamStartCol && c <= jamEndCol) || c === colStatusFuf || c === colPelaksana) {
+                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                            } else {
+                                cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                            }
+                        }
+                    }
+
+                    curRow += 2;
+                });
+
+                // Legenda Keterangan di kiri bawah & tanda tangan di kanan bawah
+                const legStart = curRow + 1;
+                ws.getCell(`A${legStart}`).value = 'Keterangan :';
+                ws.getCell(`A${legStart}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                ws.getCell(`A${legStart + 1}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00AEEF' } };
+                ws.getCell(`A${legStart + 1}`).border = borderThin;
+                ws.getCell(`B${legStart + 1}`).value = 'Target';
+                ws.getCell(`B${legStart + 1}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                ws.getCell(`A${legStart + 2}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } };
+                ws.getCell(`A${legStart + 2}`).border = borderThin;
+                ws.getCell(`B${legStart + 2}`).value = 'Aktual';
+                ws.getCell(`B${legStart + 2}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                ws.getCell(`A${legStart + 3}`).value = '#';
+                ws.getCell(`A${legStart + 3}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`A${legStart + 3}`).alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.mergeCells(`B${legStart + 3}:${lastColLetter}${legStart + 3}`);
+                ws.getCell(`B${legStart + 3}`).value = 'Persiapkan Tools,Part nya Sehari sebelum hari Pelaksanaanya';
+                ws.getCell(`B${legStart + 3}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                ws.getCell(`A${legStart + 4}`).value = '#';
+                ws.getCell(`A${legStart + 4}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`A${legStart + 4}`).alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.mergeCells(`B${legStart + 4}:D${legStart + 4}`);
+                ws.getCell(`B${legStart + 4}`).value = 'UTAMAKAN KESELAMATAN & KERJA SAMA DALAM BEKERJA';
+                ws.getCell(`B${legStart + 4}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                ws.getCell(`A${legStart + 5}`).value = '#';
+                ws.getCell(`A${legStart + 5}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`A${legStart + 5}`).alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.mergeCells(`B${legStart + 5}:D${legStart + 5}`);
+                ws.getCell(`B${legStart + 5}`).value = 'Setelah Selesai Selalu Bersihkan & Rapikan Area Kerja';
+                ws.getCell(`B${legStart + 5}`).font = { name: 'Calibri', size: 10, bold: true };
+
+                const signStartCol = Math.max(colPelaksana, totalCols - 1);
+                const signStartLetter = ws.getColumn(signStartCol).letter;
+                ws.mergeCells(`${signStartLetter}${legStart + 1}:${lastColLetter}${legStart + 1}`);
+                ws.getCell(`${signStartLetter}${legStart + 1}`).value = 'Mengetahui';
+                ws.getCell(`${signStartLetter}${legStart + 1}`).font = { name: 'Calibri', size: 10, bold: true };
+                ws.getCell(`${signStartLetter}${legStart + 1}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.mergeCells(`${signStartLetter}${legStart + 4}:${lastColLetter}${legStart + 4}`);
+                ws.getCell(`${signStartLetter}${legStart + 4}`).value = opts.mengetahui;
+                ws.getCell(`${signStartLetter}${legStart + 4}`).font = { name: 'Calibri', size: 10 };
+                ws.getCell(`${signStartLetter}${legStart + 4}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                ws.mergeCells(`${signStartLetter}${legStart + 5}:${lastColLetter}${legStart + 5}`);
+                ws.getCell(`${signStartLetter}${legStart + 5}`).value = 'KaBag Mekanik';
+                ws.getCell(`${signStartLetter}${legStart + 5}`).font = { name: 'Calibri', size: 10 };
+                ws.getCell(`${signStartLetter}${legStart + 5}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                // Atur lebar kolom
+                ws.getColumn(1).width = 6;
+                ws.getColumn(2).width = 44;
+                ws.getColumn(3).width = 16;
+                ws.getColumn(4).width = 12;
+                for (let hIdx = 0; hIdx < hours.length; hIdx++) {
+                    ws.getColumn(jamStartCol + hIdx).width = 5;
+                }
+                ws.getColumn(colStatusFuf).width = 10;
+                ws.getColumn(colPelaksana).width = 22;
+                ws.getColumn(colSparepart).width = 16;
+                ws.getColumn(colKeterangan).width = 24;
+
+                ws.pageSetup = {
+                    paperSize: 9,
+                    orientation: 'landscape',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0
+                };
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const firstGroup = groups[0];
+            const safeMesin = (groups.length === 1) ? firstGroup.mesin.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Semua_Mesin';
+            const filename = `Job_Pekerjaan_PM_${safeMesin}_${firstGroup.namaBulan}_${firstGroup.selTahun}.xlsx`;
+            if (typeof saveAs !== 'undefined') {
+                saveAs(blob, filename);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
+        }
+
+        function cetakPDFPMJobPekerjaan() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('Library PDF sedang dimuat, silakan tunggu sebentar lalu coba lagi.');
+                return;
+            }
+            const groups = getPMGroupsForJobJam();
+            if (!groups.length) {
+                alert('Tidak ada item Preventive Maintenance (rutin maupun pekerjaan tambahan) pada mesin & periode yang dipilih.');
+                return;
+            }
+
+            const opts = getPMJobJamOptions();
+            const hours = opts.hours;
+            const cfgMap = loadPMHourBlocksConfig();
+            const pelaksanaMap = loadPMPelaksanaConfig();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const marginX = 10;
+            const usableW = pageWidth - marginX * 2;
+
+            groups.forEach((g, gIdx) => {
+                if (gIdx > 0) doc.addPage('a4', 'landscape');
+
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.text("JOB PEKERJAAN MEKANIK", pageWidth / 2, 12, { align: 'center' });
+
+                doc.setFont("helvetica", "bolditalic");
+                doc.setFontSize(10.5);
+                doc.text("PREVENTIVE MAINTENANCE", pageWidth / 2, 17.5, { align: 'center' });
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.text(`Bulan : ${cleanTextForPdf(g.formDateText || (g.namaBulan + ' ' + g.selTahun))}`, marginX, 23);
+
+                const wNo = 9;
+                const wJenis = 68;
+                const wLokasi = 24;
+                const wMesin = 20;
+                const wStatusFuf = 14;
+                const wPelaksana = 36;
+                const wSparepart = 26;
+                const wKet = 34;
+                const jamAreaW = Math.max(36, usableW - (wNo + wJenis + wLokasi + wMesin + wStatusFuf + wPelaksana + wSparepart + wKet));
+                const hourColW = jamAreaW / Math.max(1, hours.length);
+
+                let y = 25.5;
+                const hHeaderTop = 6;
+                const hHeaderSub = 6;
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.3);
+
+                const drawCellBox = (cx, cy, cw, ch, text, bold = false, fontSize = 8, align = 'center', fillRgb = null) => {
+                    if (fillRgb) {
+                        doc.setFillColor(fillRgb[0], fillRgb[1], fillRgb[2]);
+                        doc.rect(cx, cy, cw, ch, 'FD');
+                    } else {
+                        doc.rect(cx, cy, cw, ch);
+                    }
+                    if (text !== undefined && text !== null && String(text) !== '') {
+                        doc.setFont("helvetica", bold ? "bold" : "normal");
+                        doc.setFontSize(fontSize);
+                        const lines = doc.splitTextToSize(String(text), Math.max(2, cw - 2));
+                        const lineH = fontSize * 0.4;
+                        const totalTextH = lines.length * lineH;
+                        let startY = cy + (ch - totalTextH) / 2 + lineH * 0.8;
+                        lines.forEach(ln => {
+                            let tx = cx + cw / 2;
+                            if (align === 'left') tx = cx + 1.5;
+                            else if (align === 'right') tx = cx + cw - 1.5;
+                            doc.text(ln, tx, startY, { align: align });
+                            startY += lineH;
+                        });
+                    }
+                };
+
+                let x = marginX;
+                const hBoth = hHeaderTop + hHeaderSub;
+                drawCellBox(x, y, wNo, hBoth, 'NO', true, 8); x += wNo;
+                drawCellBox(x, y, wJenis, hBoth, 'JENIS PEKERJAAN', true, 8); x += wJenis;
+                drawCellBox(x, y, wLokasi, hBoth, 'LOKASI', true, 8); x += wLokasi;
+                drawCellBox(x, y, wMesin, hBoth, 'Mesin', true, 8); x += wMesin;
+
+                const jamStartX = x;
+                drawCellBox(jamStartX, y, jamAreaW, hHeaderTop, 'Jam', true, 8);
+                hours.forEach((h, hIdx) => {
+                    drawCellBox(jamStartX + hIdx * hourColW, y + hHeaderTop, hourColW, hHeaderSub, String(h), true, 7.5);
+                });
+                x += jamAreaW;
+
+                drawCellBox(x, y, wStatusFuf, hBoth, 'Status\nF/UF', true, 7.5); x += wStatusFuf;
+                drawCellBox(x, y, wPelaksana, hBoth, 'PELAKSANA', true, 8); x += wPelaksana;
+                drawCellBox(x, y, wSparepart, hBoth, 'SPARE PART', true, 8); x += wSparepart;
+                drawCellBox(x, y, wKet, hBoth, 'KETERANGAN', true, 8);
+
+                y += hBoth;
+
+                g.items.forEach((it, idx) => {
+                    const rowH = 11.5;
+                    const halfH = rowH / 2;
+
+                    if (y + rowH + 34 > doc.internal.pageSize.getHeight()) {
+                        doc.addPage('a4', 'landscape');
+                        y = 14;
+                    }
+
+                    let cx = marginX;
+                    drawCellBox(cx, y, wNo, rowH, String(idx + 1), true, 8); cx += wNo;
+                    drawCellBox(cx, y, wJenis, rowH, cleanTextForPdf(it.pekerjaan), false, 7.8, 'left'); cx += wJenis;
+                    drawCellBox(cx, y, wLokasi, rowH, cleanTextForPdf(it.equipment || opts.lokasiDefault), false, 7.8); cx += wLokasi;
+                    drawCellBox(cx, y, wMesin, rowH, cleanTextForPdf(g.mesin), true, 8); cx += wMesin;
+
+                    const blk = getItemHourBlocks(it, idx, hours, g.periodeKey, g.mesin, cfgMap);
+                    const tSet = new Set(blk.target);
+                    const aSet = new Set(blk.actual);
+
+                    hours.forEach((h, hIdx) => {
+                        const isTgt = tSet.has(h);
+                        const isAkt = aSet.has(h);
+                        drawCellBox(cx + hIdx * hourColW, y, hourColW, halfH, '', false, 7, 'center', isTgt ? [0, 174, 239] : null);
+                        drawCellBox(cx + hIdx * hourColW, y + halfH, hourColW, halfH, '', false, 7, 'center', isAkt ? [146, 208, 80] : null);
+                    });
+                    cx += jamAreaW;
+
+                    drawCellBox(cx, y, wStatusFuf, rowH, it.isTambahan ? 'UF' : opts.statusFufDefault, true, 8); cx += wStatusFuf;
+                    drawCellBox(cx, y, wPelaksana, rowH, cleanTextForPdf(resolvePMPelaksana(it, idx, g.periodeKey, g.mesin, pelaksanaMap)), false, 7.8); cx += wPelaksana;
+                    drawCellBox(cx, y, wSparepart, rowH, '', false, 7.5, 'left'); cx += wSparepart;
+                    drawCellBox(cx, y, wKet, rowH, cleanTextForPdf(it.keterangan || ''), false, 7.5, 'left');
+
+                    y += rowH;
+                });
+
+                // Footer Legenda & Tanda Tangan
+                y += 3;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.text("Keterangan :", marginX, y + 3);
+
+                drawCellBox(marginX, y + 4.5, 9, 4.2, '', false, 7, 'center', [0, 174, 239]);
+                doc.setFont("helvetica", "bold");
+                doc.text("Target", marginX + 11, y + 7.5);
+
+                drawCellBox(marginX, y + 9.2, 9, 4.2, '', false, 7, 'center', [146, 208, 80]);
+                doc.setFont("helvetica", "bold");
+                doc.text("Aktual", marginX + 11, y + 12.2);
+
+                doc.text("#", marginX + 3, y + 17.2, { align: 'center' });
+                doc.text("Persiapkan Tools,Part nya Sehari sebelum hari Pelaksanaanya", marginX + 11, y + 17.2);
+
+                doc.text("#", marginX + 3, y + 21.2, { align: 'center' });
+                doc.text("UTAMAKAN KESELAMATAN & KERJA SAMA DALAM BEKERJA", marginX + 11, y + 21.2);
+
+                doc.text("#", marginX + 3, y + 25.2, { align: 'center' });
+                doc.text("Setelah Selesai Selalu Bersihkan & Rapikan Area Kerja", marginX + 11, y + 25.2);
+
+                doc.setFont("helvetica", "normal");
+                doc.text("Mengetahui", pageWidth - marginX - 24, y + 7.5, { align: 'center' });
+                doc.text(cleanTextForPdf(opts.mengetahui), pageWidth - marginX - 24, y + 20.5, { align: 'center' });
+                doc.text("KaBag Mekanik", pageWidth - marginX - 24, y + 24.5, { align: 'center' });
+
+                const safeMesin = (groups.length === 1) ? g.mesin.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Semua_Mesin';
+                if (gIdx === groups.length - 1) {
+                    savePdfMobileFriendly(doc, `Job_Pekerjaan_PM_${safeMesin}_${g.namaBulan}_${g.selTahun}.pdf`);
+                }
+            });
+        }
+    </script>
+
 </body>
 </html>
-Processed and analyzed in code
-Analyzing
